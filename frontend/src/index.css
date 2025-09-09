@@ -1,0 +1,70 @@
+/* AIDatabench 基础样式 - Dark 主题 */
+
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: #ffffff;
+  background-color: #141414;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 重置默认样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #141414;
+  color: #ffffff;
+}
+
+/* 链接样式 - Dark 主题 */
+a {
+  font-weight: 500;
+  color: #1890ff;
+  text-decoration: none;
+}
+a:hover {
+  color: #40a9ff;
+  text-decoration: underline;
+}
+
+/* 按钮样式由 Ant Design 提供，这里只做基础设置 */
+button {
+  cursor: pointer;
+}
+
+/* 滚动条美化 - Dark 主题 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #262626;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #434343;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #595959;
+}
+
+/* 去除默认的 focus outline，由 Ant Design 组件提供更好的焦点样式 */
+*:focus {
+  outline: none;
+}

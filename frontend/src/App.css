@@ -1,0 +1,172 @@
+/* AIDatabench 全局样式 - Dark 主题 */
+
+/* 重置默认样式 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: #141414;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+  color: #ffffff;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #141414;
+}
+
+/* 自定义ProLayout样式 - Dark主题 */
+.ant-pro-layout {
+  height: 100vh;
+  background-color: #141414 !important;
+}
+
+.ant-pro-layout-content {
+  background-color: #141414 !important;
+}
+
+/* Ant Design 卡片深色主题优化 */
+.ant-card {
+  margin-bottom: 16px;
+  background-color: #1f1f1f !important;
+  border-color: #303030 !important;
+}
+
+.ant-card-head {
+  background-color: #262626 !important;
+  border-bottom-color: #303030 !important;
+}
+
+.ant-card-body {
+  background-color: #1f1f1f !important;
+}
+
+/* 统计卡片样式 */
+.ant-statistic {
+  text-align: center;
+}
+
+.ant-statistic-content {
+  color: #ffffff !important;
+}
+
+/* Empty组件样式优化 */
+.ant-empty-description {
+  color: #8c8c8c !important;
+}
+
+/* 模态框样式优化 */
+.ant-modal-content {
+  background-color: #1f1f1f !important;
+}
+
+.ant-modal-header {
+  background-color: #262626 !important;
+  border-bottom-color: #303030 !important;
+}
+
+.ant-modal-title {
+  color: #ffffff !important;
+}
+
+/* 表单样式优化 */
+.ant-form-item-label > label {
+  color: #ffffff !important;
+}
+
+.ant-input {
+  background-color: #262626 !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+.ant-input:hover {
+  border-color: #1890ff !important;
+}
+
+.ant-input:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.ant-input-affix-wrapper {
+  background-color: #262626 !important;
+  border-color: #434343 !important;
+}
+
+/* TextArea样式 */
+.ant-input {
+  background-color: #262626 !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+/* 按钮样式优化 */
+.ant-btn-default {
+  background-color: #262626 !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+.ant-btn-default:hover {
+  background-color: #434343 !important;
+  border-color: #1890ff !important;
+}
+
+/* Tab样式优化 - Dark主题 */
+.ant-tabs .ant-tabs-tab {
+  color: #8c8c8c !important;
+}
+
+.ant-tabs .ant-tabs-tab:hover {
+  color: #40a9ff !important;
+}
+
+.ant-tabs .ant-tabs-tab.ant-tabs-tab-active {
+  color: #1890ff !important;
+}
+
+.ant-tabs .ant-tabs-ink-bar {
+  background-color: #1890ff !important;
+}
+
+.ant-tabs .ant-tabs-content-holder {
+  background-color: #1f1f1f !important;
+  padding: 24px;
+}
+
+.ant-tabs .ant-tabs-tabpane {
+  background-color: #1f1f1f !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .ant-pro-layout-content {
+    margin: 16px 8px 0;
+  }
+  
+  .ant-tabs .ant-tabs-content-holder {
+    padding: 16px;
+  }
+}
+
+.ant-pro-layout-content{
+  padding: 0 !important;
+  margin: 0 !important;
+}
