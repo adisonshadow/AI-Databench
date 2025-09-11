@@ -42,8 +42,8 @@ export default defineConfig({
       'antd',
       '@ant-design/pro-components',
       '@antv/g6',
-      'react-router-dom'
-      // 'react-ai-model-manager'  // 暂时禁用
+      'react-router-dom',
+      'adb-typeorm'
     ]
   }
 })

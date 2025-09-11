@@ -73,12 +73,12 @@ body {
 
 /* 模态框样式优化 */
 .ant-modal-content {
-  background-color: #1f1f1f !important;
+  /* background-color: #1f1f1f !important; */
 }
 
 .ant-modal-header {
-  background-color: #262626 !important;
-  border-bottom-color: #303030 !important;
+  /* background-color: #262626 !important;
+  border-bottom-color: #15009b !important; */
 }
 
 .ant-modal-title {
@@ -170,3 +170,7 @@ body {
   padding: 0 !important;
   margin: 0 !important;
 }
+
+.ant-modal-header {
+  background-color: transparent !important;
+} 

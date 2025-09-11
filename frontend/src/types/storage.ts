@@ -46,6 +46,43 @@ export interface ExtendedColumnInfo extends ColumnInfoOptions {
   comment?: string;          // 字段注释
   status?: 'enabled' | 'disabled' | 'archived';
   orderIndex?: number;       // 排序索引
+  
+  // ADB 扩展类型配置
+  mediaConfig?: {
+    mediaType: 'image' | 'video' | 'audio' | 'document' | 'file';
+    formats: string[];
+    maxSize?: number;
+    isMultiple?: boolean;
+    storagePath?: string;
+  };
+  enumConfig?: {
+    enum: any;
+    isMultiple?: boolean;
+    default?: any;
+  };
+  autoIncrementIdConfig?: {
+    startValue?: number;
+    increment?: number;
+    sequenceName?: string;
+    isPrimaryKey?: boolean;
+    description?: string;
+  };
+  guidIdConfig?: {
+    version?: 'v1' | 'v4' | 'v5';
+    format?: 'default' | 'braced' | 'binary' | 'urn';
+    isPrimaryKey?: boolean;
+    description?: string;
+    generateOnInsert?: boolean;
+  };
+  snowflakeIdConfig?: {
+    machineId?: number;
+    datacenterId?: number;
+    epoch?: number;
+    isPrimaryKey?: boolean;
+    description?: string;
+    generateOnInsert?: boolean;
+    format?: 'number' | 'string';
+  };
 }
 
 // 基于ADB-TypeORM的实体定义

@@ -15,7 +15,6 @@
     "@antv/g6": "^5.0.49",
     "@monaco-editor/react": "^4.7.0",
     "@types/uuid": "^10.0.0",
-    "adb-typeorm": "file:../../ADB-TypeORM",
     "antd": "^5.27.3",
     "axios": "^1.11.0",
     "react": "^19.1.1",

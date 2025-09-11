@@ -5,36 +5,52 @@ import {
   Splitter, 
   Button, 
   Space, 
-  Tree, 
   Empty, 
-  Typography, 
-  Tag,
+  Typography,
   Modal,
   Form,
   Input,
   Select,
-  message
+  message,
+  Table,
+  Badge,
+  Tooltip,
+  Dropdown,
+  Flex
 } from 'antd';
 import { 
   PlusOutlined, 
   RobotOutlined, 
   PartitionOutlined,
-  FolderOutlined,
-  TableOutlined
+  BuildOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  MoreOutlined,
+  CaretDownOutlined,
+  CaretRightOutlined
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '@/stores/storage';
-import FieldManager from '@/components/FieldManager';
+import FieldsManager from '@/components/FieldsManager';
 import type { Project, ADBEntity } from '@/types/storage';
-import type { TreeProps, DataNode } from 'antd/es/tree';
+import type { ColumnsType } from 'antd/es/table';
+import type { Key } from 'antd/es/table/interface';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
-interface EntityTreeNode extends DataNode {
-  entityId?: string;
-  type: 'folder' | 'entity';
+// 扩展SchemaTreeItem类型以支持表格显示
+interface SchemaTreeItem {
+  id?: string;
+  name: string;
+  code: string;
+  description?: string;
   status?: 'enabled' | 'disabled' | 'archived';
+  isLocked?: boolean;
+  children?: SchemaTreeItem[];
+  fields?: ADBEntity['fields'];
 }
 
 interface EntityFormValues {
@@ -51,7 +67,8 @@ const ModelDesigner: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEntity, setSelectedEntity] = useState<ADBEntity | null>(null);
-  const [entityTreeData, setEntityTreeData] = useState<EntityTreeNode[]>([]);
+  const [entityTreeData, setEntityTreeData] = useState<SchemaTreeItem[]>([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [createForm] = Form.useForm();
 
@@ -61,100 +78,283 @@ const ModelDesigner: React.FC = () => {
     generateEntityTreeData(updatedProject);
   };
 
-  // 生成实体树形数据
+  // 生成实体树形数据（参考旧项目buildSchemaTree）
   const generateEntityTreeData = (project: Project) => {
     const entities = Object.values(project.schema.entities || {});
+    const allCodes: string[] = [];
+    const codeMap = new Map<string, SchemaTreeItem>();
+    const result: SchemaTreeItem[] = [];
     
-    // 按状态分组
-    const enabledEntities = entities.filter(entity => entity.entityInfo.status === 'enabled');
-    const disabledEntities = entities.filter(entity => entity.entityInfo.status === 'disabled');
-    const archivedEntities = entities.filter(entity => entity.entityInfo.status === 'archived');
-    
-    const treeData: EntityTreeNode[] = [
-      {
-        title: `启用中 (${enabledEntities.length})`,
-        key: 'enabled',
-        type: 'folder',
-        icon: <FolderOutlined />,
-        children: enabledEntities.map(entity => ({
-          title: (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <Text strong>{entity.entityInfo.label || entity.entityInfo.code}</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>{entity.entityInfo.code}</Text>
-              </div>
-              <Tag color="green">启用</Tag>
-            </div>
-          ),
-          key: `entity-${entity.entityInfo.id}`,
-          entityId: entity.entityInfo.id,
-          type: 'entity',
-          status: 'enabled',
-          icon: <TableOutlined />
-        }))
-      },
-      {
-        title: `已禁用 (${disabledEntities.length})`,
-        key: 'disabled',
-        type: 'folder',
-        icon: <FolderOutlined />,
-        children: disabledEntities.map(entity => ({
-          title: (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <Text>{entity.entityInfo.label || entity.entityInfo.code}</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>{entity.entityInfo.code}</Text>
-              </div>
-              <Tag color="orange">禁用</Tag>
-            </div>
-          ),
-          key: `entity-${entity.entityInfo.id}`,
-          entityId: entity.entityInfo.id,
-          type: 'entity',
-          status: 'disabled',
-          icon: <TableOutlined style={{ color: '#d9d9d9' }} />
-        }))
-      },
-      {
-        title: `已归档 (${archivedEntities.length})`,
-        key: 'archived',
-        type: 'folder',
-        icon: <FolderOutlined />,
-        children: archivedEntities.map(entity => ({
-          title: (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <Text delete>{entity.entityInfo.label || entity.entityInfo.code}</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>{entity.entityInfo.code}</Text>
-              </div>
-              <Tag color="red">归档</Tag>
-            </div>
-          ),
-          key: `entity-${entity.entityInfo.id}`,
-          entityId: entity.entityInfo.id,
-          type: 'entity',
-          status: 'archived',
-          icon: <TableOutlined style={{ color: '#ff4d4f' }} />
-        }))
+    // 首先创建所有节点
+    entities.forEach(entity => {
+      const codes = entity.entityInfo.code.split(':');
+      let currentPath = '';
+      
+      codes.forEach((code, index) => {
+        currentPath = currentPath ? `${currentPath}:${code}` : code;
+        allCodes.push(currentPath);
+        
+        if (!codeMap.has(currentPath)) {
+          const node: SchemaTreeItem = {
+            ...(index === codes.length - 1 ? {
+              id: entity.entityInfo.id,
+              name: entity.entityInfo.label || code,
+              description: entity.entityInfo.description,
+              status: entity.entityInfo.status || 'enabled',
+              isLocked: entity.entityInfo.isLocked || false,
+              fields: entity.fields
+            } : {
+              name: code,
+              status: 'enabled'
+            }),
+            code: currentPath,
+            children: []
+          };
+          codeMap.set(currentPath, node);
+        }
+      });
+    });
+
+    // 构建树形结构
+    codeMap.forEach((node) => {
+      const parentPath = node.code.split(':').slice(0, -1).join(':');
+      if (parentPath) {
+        const parent = codeMap.get(parentPath);
+        if (parent) {
+          parent.children = parent.children || [];
+          parent.children.push(node);
+        }
+      } else {
+        result.push(node);
       }
-    ];
+    });
+
+    // 清理没有子节点的children数组
+    const cleanupEmptyChildren = (nodes: SchemaTreeItem[]) => {
+      nodes.forEach(node => {
+        if (node.children && node.children.length === 0) {
+          delete node.children;
+        } else if (node.children) {
+          cleanupEmptyChildren(node.children);
+        }
+      });
+    };
     
-    setEntityTreeData(treeData);
+    cleanupEmptyChildren(result);
+    
+    // 设置所有节点为展开状态
+    setExpandedRowKeys([...new Set(allCodes)]);
+    setEntityTreeData(result);
   };
 
   // 处理实体选择
-  const handleEntitySelect: TreeProps['onSelect'] = (selectedKeys, info) => {
-    const node = info.node as unknown as EntityTreeNode;
-    if (node.type === 'entity' && node.entityId && project) {
-      const entity = project.schema.entities[node.entityId];
-      if (entity) {
-        setSelectedEntity(entity);
+  const handleEntitySelect = (entity: SchemaTreeItem) => {
+    if (!entity.children?.length && entity.id && project) {
+      const fullEntity = project.schema.entities[entity.id];
+      if (fullEntity) {
+        setSelectedEntity(fullEntity);
       }
     }
   };
+
+  // 处理实体锁定/解锁
+  const handleEntityLockToggle = async (entity: SchemaTreeItem) => {
+    if (!entity.id || !project) return;
+    
+    try {
+      const updatedEntity = {
+        ...project.schema.entities[entity.id],
+        entityInfo: {
+          ...project.schema.entities[entity.id].entityInfo,
+          isLocked: !entity.isLocked
+        },
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedProject = {
+        ...project,
+        schema: {
+          ...project.schema,
+          entities: {
+            ...project.schema.entities,
+            [entity.id]: updatedEntity
+          }
+        }
+      };
+
+      StorageService.saveProject(updatedProject);
+      handleProjectUpdate(updatedProject);
+      
+      message.success(entity.isLocked ? '实体已解锁' : '实体已锁定');
+    } catch (error) {
+      console.error('锁定状态更改失败:', error);
+      message.error('锁定状态更改失败');
+    }
+  };
+
+  // 处理实体编辑
+  const handleEntityEdit = (entity: SchemaTreeItem) => {
+    if (!entity.id) return;
+    
+    createForm.setFieldsValue({
+      code: entity.code,
+      label: entity.name,
+      description: entity.description,
+      status: entity.status
+    });
+    setIsCreateModalVisible(true);
+  };
+
+  // 处理实体删除
+  const handleEntityDelete = async (entity: SchemaTreeItem) => {
+    if (!entity.id || !project) return;
+    
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [entity.id]: _, ...remainingEntities } = project.schema.entities;
+      
+      const updatedProject = {
+        ...project,
+        schema: {
+          ...project.schema,
+          entities: remainingEntities
+        }
+      };
+
+      StorageService.saveProject(updatedProject);
+      handleProjectUpdate(updatedProject);
+      
+      // 如果删除的是当前选中的实体，清除选中状态
+      if (selectedEntity?.entityInfo.id === entity.id) {
+        setSelectedEntity(null);
+      }
+      
+      message.success('实体删除成功');
+    } catch (error) {
+      console.error('删除实体失败:', error);
+      message.error('删除实体失败');
+    }
+  };
+
+  // 定义表格列
+  const columns: ColumnsType<SchemaTreeItem> = [
+    {
+      title: 'Code',
+      dataIndex: 'code',
+      key: 'code',
+      render: (text: string, record: SchemaTreeItem) => {
+        // 获取当前层级的名称（最后一个冒号后的部分）
+        const currentLevelName = text.split(':').pop() || '';
+        return (
+          <span style={{ color: record.children?.length ? '#999' : undefined }}>
+            {!record.children?.length && (
+              <BuildOutlined 
+                style={{ 
+                  fontSize: '12px', 
+                  marginRight: '8px', 
+                  color: record.status === 'enabled' ? '#1890ff' : '#999' 
+                }} 
+              />
+            )}
+            {currentLevelName}
+          </span>
+        );
+      },
+    },
+    {
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: SchemaTreeItem) => {
+        // 只有叶子节点显示完整信息
+        if (record.children?.length) {
+          return null;
+        }
+        return (
+          <div>
+            <Space>
+              <Badge status={record.status === 'enabled' ? 'success' : 'default'}/>
+              <span>{text}</span>
+            </Space>
+            {record.description && (
+              <div style={{ color: '#666', fontSize: '12px' }}>
+                {record.description}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      fixed: 'right' as const,
+      width: 120,
+      render: (_: unknown, record: SchemaTreeItem) => {
+        // 只有叶子节点显示操作按钮
+        if (record.children?.length) return null;
+        
+        const dropdownItems = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            disabled: record.isLocked,
+            onClick: () => handleEntityEdit(record)
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            disabled: record.isLocked,
+            danger: true,
+            onClick: () => {
+              Modal.confirm({
+                title: '删除实体',
+                content: `确定要删除 "${record.name}" 吗？此操作不可恢复。`,
+                okText: '确定',
+                cancelText: '取消',
+                okType: 'danger',
+                onOk: () => handleEntityDelete(record)
+              });
+            }
+          }
+        ];
+        
+        return (
+          <Flex justify='end'>
+            <Tooltip title={record.isLocked ? "解锁实体" : "锁定实体"}>
+              <Button
+                type="link"
+                icon={record.isLocked ? <LockOutlined /> : <UnlockOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEntityLockToggle(record);
+                }}
+              />
+            </Tooltip>
+            <Dropdown
+              menu={{
+                items: dropdownItems.map(item => ({
+                  ...item,
+                  onClick: () => {
+                    item.onClick();
+                  }
+                }))
+              }}
+              trigger={['click']}
+            >
+              <Button
+                type="link"
+                icon={<MoreOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Dropdown>
+          </Flex>
+        );
+      },
+    },
+  ];
 
   // 处理AI新建实体
   const handleAICreateEntity = () => {
@@ -282,30 +482,31 @@ const ModelDesigner: React.FC = () => {
         <Splitter.Panel defaultSize="30%" min="20%" max="50%">
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* 实体管理头部 */}
-            <div style={{ 
-              padding: '16px', 
-              borderBottom: '1px solid #434343',
-              backgroundColor: '#1f1f1f'
+            <Space style={{ 
+              height: 40,
+              backgroundColor: '#1f1f1f',
+              padding: '0 20px',
             }}>
-              <Title level={5} style={{ margin: 0, marginBottom: 12, color: '#ffffff' }}>
+              {/* <Title level={5} style={{ margin: 0, marginBottom: 12, color: '#ffffff' }}>
                 实体管理
-              </Title>
-              <Space>
-                <Button 
-                  type="primary" 
-                  icon={<RobotOutlined />}
-                  onClick={handleAICreateEntity}
-                  size="small"
-                >
-                  AI新建
-                </Button>
-                <Button 
-                  icon={<PlusOutlined />}
-                  onClick={handleManualCreateEntity}
-                  size="small"
-                >
-                  手工新建
-                </Button>
+              </Title> */}
+                <Space.Compact block>
+                    <Button 
+                    //   type="primary" 
+                    icon={<RobotOutlined />}
+                    onClick={handleAICreateEntity}
+                    size="small"
+                    >
+                    AI新建
+                    </Button>
+                    <Button 
+                    icon={<PlusOutlined />}
+                    onClick={handleManualCreateEntity}
+                    size="small"
+                    >
+                    手工新建
+                    </Button>
+                </Space.Compact>
                 <Button 
                   icon={<PartitionOutlined />}
                   onClick={handleViewGraph}
@@ -313,8 +514,7 @@ const ModelDesigner: React.FC = () => {
                 >
                   图谱
                 </Button>
-              </Space>
-            </div>
+            </Space>
             
             {/* 实体树形列表 */}
             <div style={{ 
@@ -324,15 +524,77 @@ const ModelDesigner: React.FC = () => {
               backgroundColor: '#141414'
             }}>
               {entityTreeData.length > 0 ? (
-                <Tree
-                  treeData={entityTreeData}
-                  onSelect={handleEntitySelect}
-                  defaultExpandAll
-                  showIcon
-                  blockNode
+                <Table<SchemaTreeItem>
+                  columns={columns}
+                  dataSource={entityTreeData}
+                  rowKey={(record) => record.code}
+                  pagination={false}
+                  size="small"
+                  expandable={{
+                    expandedRowKeys,
+                    onExpandedRowsChange: (expandedKeys: readonly Key[]) => {
+                      setExpandedRowKeys(expandedKeys as string[]);
+                    },
+                    expandIcon: ({ expanded, onExpand, record }) => {
+                      // 如果是叶子节点（没有子节点），不显示图标
+                      if (!record.children?.length) {
+                        return null;
+                      }
+                      return (
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onExpand(record, e);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {expanded ? (
+                            <CaretDownOutlined 
+                              style={{ 
+                                fontSize: '12px', 
+                                color: '#666', 
+                                marginRight: '6px' 
+                              }} 
+                            />
+                          ) : (
+                            <CaretRightOutlined 
+                              style={{ 
+                                fontSize: '12px', 
+                                color: '#999', 
+                                marginRight: '6px', 
+                                marginTop: '2px' 
+                              }} 
+                            />
+                          )}
+                        </span>
+                      );
+                    },
+                  }}
+                  onRow={(record) => ({
+                    onClick: () => {
+                      if (record.children?.length) {
+                        // 虚拟节点：点击整行展开/折叠
+                        const isExpanded = expandedRowKeys.includes(record.code);
+                        if (isExpanded) {
+                          setExpandedRowKeys(expandedRowKeys.filter(key => key !== record.code));
+                        } else {
+                          setExpandedRowKeys([...expandedRowKeys, record.code]);
+                        }
+                      } else {
+                        // 叶子节点：选中实体
+                        handleEntitySelect(record);
+                      }
+                    },
+                    className:
+                      !record.children?.length && selectedEntity?.entityInfo.id === record.id
+                        ? "ant-table-row-selected"
+                        : "",
+                    style: {
+                      cursor: "pointer",
+                    },
+                  })}
                   style={{ 
-                    backgroundColor: 'transparent',
-                    color: '#ffffff'
+                    backgroundColor: 'transparent'
                   }}
                 />
               ) : (
@@ -347,52 +609,33 @@ const ModelDesigner: React.FC = () => {
         
         {/* 右侧：字段管理 */}
         <Splitter.Panel>
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* 字段管理头部 */}
-            <div style={{ 
-              padding: '16px', 
-              borderBottom: '1px solid #434343',
-              backgroundColor: '#1f1f1f'
-            }}>
-              <Title level={5} style={{ margin: 0, color: '#ffffff' }}>
-                {selectedEntity ? 
-                  `字段管理 - ${selectedEntity.entityInfo.label || selectedEntity.entityInfo.code}` : 
-                  '字段管理'
-                }
-              </Title>
-              {selectedEntity && (
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">
-                    表名: {selectedEntity.entityInfo.tableName || selectedEntity.entityInfo.code}
-                  </Text>
-                  {selectedEntity.entityInfo.comment && (
-                    <div>
-                      <Text type="secondary">
-                        说明: {selectedEntity.entityInfo.comment}
-                      </Text>
-                    </div>
-                  )}
-                </div>
-              )}
+          {selectedEntity ? (
+            <FieldsManager entity={selectedEntity} project={project!} onEntityUpdate={handleProjectUpdate} />
+          ) : (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* 字段管理头部（无选中实体时显示） */}
+              <Space style={{ 
+                height: 40,
+                padding: '0 20px',
+                backgroundColor: '#1f1f1f'
+              }}>
+                <Text type="secondary">请选择一个实体查看字段信息</Text>
+              </Space>
+              
+              {/* 字段列表内容区域 */}
+              <div style={{ 
+                flex: 1, 
+                overflow: 'auto', 
+                padding: '16px',
+                backgroundColor: '#141414',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Empty description="请选择一个实体查看字段信息" />
+              </div>
             </div>
-            
-            {/* 字段列表 */}
-            <div style={{ 
-              flex: 1, 
-              overflow: 'auto', 
-              padding: '16px',
-              backgroundColor: '#141414'
-            }}>
-              {selectedEntity ? (
-                <FieldManager entity={selectedEntity} project={project!} onEntityUpdate={handleProjectUpdate} />
-              ) : (
-                <Empty 
-                  description="请选择一个实体查看字段信息" 
-                  style={{ marginTop: '20%' }}
-                />
-              )}
-            </div>
-          </div>
+          )}
         </Splitter.Panel>
       </Splitter>
       
@@ -406,7 +649,7 @@ const ModelDesigner: React.FC = () => {
         }}
         onOk={() => createForm.submit()}
         width={600}
-        destroyOnClose
+        destroyOnHidden
         maskClosable={false}
       >
         <Form
