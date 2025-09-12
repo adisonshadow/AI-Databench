@@ -42,17 +42,6 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
   // 关系表格列定义
   const columns: ColumnsType<Relation> = [
     {
-      title: '关系类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: RelationType) => (
-        <Tag color={getRelationTypeColor(type)}>
-          {RelationUtils.getRelationTypeDisplayName(type)}
-        </Tag>
-      ),
-    },
-    {
       title: '源实体',
       dataIndex: ['from', 'entityName'],
       key: 'from',
@@ -71,12 +60,23 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
       width: 120,
     },
     {
-      title: '反向名称',
-      dataIndex: 'inverseName',
-      key: 'inverseName',
-      width: 120,
-      render: (inverseName: string) => inverseName || '-',
+      title: '关系类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 100,
+      render: (type: RelationType) => (
+        <Tag color={getRelationTypeColor(type)}>
+          {RelationUtils.getRelationTypeDisplayName(type)}
+        </Tag>
+      ),
     },
+    // {
+    //   title: '反向名称',
+    //   dataIndex: 'inverseName',
+    //   key: 'inverseName',
+    //   width: 120,
+    //   render: (inverseName: string) => inverseName || '-',
+    // },
     {
       title: '级联操作',
       dataIndex: ['config', 'cascade'],
@@ -88,23 +88,23 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
         </Tag>
       ),
     },
-    {
-      title: '删除策略',
-      dataIndex: ['config', 'onDelete'],
-      key: 'onDelete',
-      width: 100,
-      render: (onDelete: CascadeType) => (
-        <Tag color={getCascadeTypeColor(onDelete)}>
-          {RelationUtils.getCascadeTypeDisplayName(onDelete)}
-        </Tag>
-      ),
-    },
+    // {
+    //   title: '删除策略',
+    //   dataIndex: ['config', 'onDelete'],
+    //   key: 'onDelete',
+    //   width: 100,
+    //   render: (onDelete: CascadeType) => (
+    //     <Tag color={getCascadeTypeColor(onDelete)}>
+    //       {RelationUtils.getCascadeTypeDisplayName(onDelete)}
+    //     </Tag>
+    //   ),
+    // },
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 80,
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" align='center'>
           <Button
             type="link"
             icon={<EditOutlined />}

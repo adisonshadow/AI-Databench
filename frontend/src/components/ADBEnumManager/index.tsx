@@ -14,7 +14,8 @@ import {
   List,
   Form,
   Select,
-  Divider
+  Divider,
+  Empty
 } from 'antd';
 import {
   PlusOutlined,
@@ -451,7 +452,10 @@ const ADBEnumManager: React.FC<ADBEnumManagerProps> = ({
                 )}
               />
             ) : (
-              <div style={{ color: '#999' }}>暂无选项</div>
+              <Empty 
+                description="暂无选项"
+                style={{ margin: '40px 0' }}
+              />
             )}
           </div>
         );

@@ -10,6 +10,7 @@ interface IndexEditModalProps {
   onOk: (values: Index) => void;
   editingIndex: Index | null;
   availableFields: string[];
+  currentIndexes: Index[]; // 添加当前索引列表属性
 }
 
 const IndexEditModal: React.FC<IndexEditModalProps> = ({ 
@@ -17,7 +18,8 @@ const IndexEditModal: React.FC<IndexEditModalProps> = ({
   onCancel, 
   onOk, 
   editingIndex,
-  availableFields
+  availableFields,
+  currentIndexes // 接收当前索引列表
 }) => {
   const [form] = Form.useForm();
 
@@ -35,6 +37,25 @@ const IndexEditModal: React.FC<IndexEditModalProps> = ({
       }
     }
   }, [visible, editingIndex, form]);
+
+  // 检查索引名称是否重复
+  const validateIndexName = (name: string): Promise<void> => {
+    if (!name) {
+      return Promise.resolve();
+    }
+
+    // 检查是否有同名索引（排除当前编辑的索引）
+    const isDuplicate = currentIndexes.some(index => 
+      index.name === name && 
+      (!editingIndex || index.id !== editingIndex.id)
+    );
+
+    if (isDuplicate) {
+      return Promise.reject(new Error('该索引名称已存在，请使用其他名称'));
+    }
+    
+    return Promise.resolve();
+  };
 
   const handleOk = async () => {
     try {
@@ -72,7 +93,14 @@ const IndexEditModal: React.FC<IndexEditModalProps> = ({
         <Form.Item
           name="name"
           label="索引名称"
-          rules={[{ required: true, message: '请输入索引名称' }]}
+          hasFeedback
+          rules={[
+            { required: true, message: '请输入索引名称' },
+            { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '索引名称只能包含字母、数字和下划线，且必须以字母开头' },
+            {
+              validator: (_, value) => validateIndexName(value),
+            }
+          ]}
         >
           <Input placeholder="索引名称" />
         </Form.Item>

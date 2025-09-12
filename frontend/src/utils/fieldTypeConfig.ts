@@ -725,9 +725,9 @@ export function supportsRelationConfig(type: string): boolean {
 export function getFieldTypeHint(type: string): string {
   const fieldInfo = getFieldTypeInfo(type);
   
-  if (isIDType(type)) {
-    return '此类型自动设置为主键，无需额外配置';
-  }
+  // if (isIDType(type)) {
+  //   return '此类型自动设置为主键，无需额外配置';
+  // }
   
   // if (fieldInfo.category === FieldCategory.DATETIME) {
   //   return '建议使用当前时间作为默认值';

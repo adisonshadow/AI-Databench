@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Button, Space, Popconfirm, Empty } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Index } from '@/types/storage';
 
@@ -23,7 +23,7 @@ const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCrea
       title: '字段',
       dataIndex: 'fields',
       key: 'fields',
-      render: (fields: string[]) => fields.join(', '),
+      render: (fields: string[]) => (fields || []).filter((field): field is string => Boolean(field)).join(', '),
     },
     {
       title: '唯一性',

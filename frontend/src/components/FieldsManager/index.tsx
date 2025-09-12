@@ -19,7 +19,7 @@ import type {
   RelationValidationResult,
   RelationConflict
 } from '@/types/storage';
-import { RelationType, CascadeType } from '@/types/storage';
+import { RelationType } from '@/types/storage';
 import { RelationUtils } from '@/utils/relationUtils';
 
 // 导入新创建的组件
@@ -163,8 +163,13 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         return;
       }
 
-      // 检查冲突
-      const relationConflicts = RelationUtils.checkConflicts(newRelation, project.schema.relations || []);
+      // 检查冲突 - 排除正在编辑的关系
+      const existingRelations = project.schema.relations || [];
+      const relationsToCheck = editingRelationInFields 
+        ? existingRelations.filter(r => r.id !== editingRelationInFields.id)
+        : existingRelations;
+        
+      const relationConflicts = RelationUtils.checkConflicts(newRelation, relationsToCheck);
       setRelationConflicts(relationConflicts);
 
       if (relationConflicts.length > 0) {
@@ -732,6 +737,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         editingRelation={editingRelationInFields}
         form={relationForm}
         project={project}
+        entity={entity} // 传递当前实体
         validationResult={relationValidationResult}
         conflicts={relationConflicts}
         entities={entities}
@@ -756,6 +762,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         onOk={handleSaveIndex}
         editingIndex={editingIndex}
         availableFields={availableFields}
+        currentIndexes={indexes} // 传递当前索引列表
       />
     </div>
   );
