@@ -7,7 +7,8 @@ import {
   List, 
   Button, 
   Typography, 
-  Space 
+  Space, 
+  Empty
 } from 'antd';
 import { 
   ProjectOutlined, 
@@ -149,7 +150,10 @@ const Dashboard: React.FC = () => {
                 )}
               />
             ) : (
-              <Text type="secondary">暂无最近项目</Text>
+              <Empty 
+                  description="暂无最近项目"
+                  style={{ margin: '40px 0' }}
+              />
             )}
           </Card>
         </Col>

@@ -35,13 +35,32 @@ export interface AIDatabenchStorage {
 }
 
 // 扩展ADB-TypeORM的EntityInfoOptions以包含所需字段
-export interface ExtendedEntityInfo extends EntityInfoOptions {
+export interface ExtendedEntityInfo {
+  id: string;                    // 实体唯一标识
+  code: string;                  // 唯一识别码
+  label: string;                 // 显示名称
+  status?: 'enabled' | 'disabled' | 'archived';
+  isLocked?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  name?: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
   tableName?: string;        // 数据表名
   comment?: string;          // 实体注释
 }
 
 // 扩展ADB-TypeORM的ColumnInfoOptions以包含所需字段
-export interface ExtendedColumnInfo extends ColumnInfoOptions {
+export interface ExtendedColumnInfo {
+  id: string;                    // 唯一标识
+  label: string;                 // 字段显示名
+  extendType?: string;           // 扩展类型标识
+  mediaConfig?: MediaConfigOptions;
+  enumConfig?: EnumConfigOptions;
+  autoIncrementIdConfig?: AutoIncrementIdConfigOptions;
+  guidIdConfig?: GuidIdConfigOptions;
+  snowflakeIdConfig?: SnowflakeIdConfigOptions;
   code?: string;             // 字段标识码
   comment?: string;          // 字段注释
   status?: 'enabled' | 'disabled' | 'archived';
@@ -92,6 +111,9 @@ export interface ADBEntity {
   
   // 字段定义（基于ADB-TypeORM ColumnInfo）
   fields: Record<string, ADBField>;
+  
+  // 索引定义
+  indexes?: Index[];
   
   // 原始的TypeORM实体代码
   entityCode?: string;
@@ -252,31 +274,129 @@ export interface Field {
   };
 }
 
+// 关系类型枚举
+export enum RelationType {
+  ONE_TO_ONE = 'oneToOne',
+  ONE_TO_MANY = 'oneToMany',
+  MANY_TO_ONE = 'manyToOne',
+  MANY_TO_MANY = 'manyToMany'
+}
+
+// 级联操作类型
+export enum CascadeType {
+  CASCADE = 'CASCADE',
+  SET_NULL = 'SET NULL',
+  RESTRICT = 'RESTRICT',
+  NO_ACTION = 'NO ACTION'
+}
+
+// 关系配置
+export interface RelationConfig {
+  cascade: boolean;                    // 级联操作
+  onDelete: CascadeType;              // 删除策略
+  onUpdate: CascadeType;              // 更新策略
+  nullable: boolean;                  // 是否可为空
+  eager: boolean;                     // 是否立即加载
+  lazy: boolean;                      // 是否懒加载
+}
+
+// 多对多关系中间表配置
+export interface JoinTableConfig {
+  name: string;                      // 中间表名称
+  joinColumn: string;                // 连接列名称
+  inverseJoinColumn: string;          // 反向连接列名称
+}
+
+// 关系元数据
+export interface RelationMetadata {
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  description?: string;              // 关系描述
+  tags: string[];                   // 标签
+}
+
+// 关系实体端点
+export interface RelationEndpoint {
+  entityId: string;                  // 实体ID
+  entityName: string;               // 实体名称
+  fieldId?: string;                 // 字段ID（可选）
+  fieldName?: string;               // 字段名称（可选）
+}
+
+// 关系接口
 export interface Relation {
-  id: string;
-  type: 'oneToOne' | 'oneToMany' | 'manyToOne' | 'manyToMany';
+  id: string;                       // 关系唯一标识
+  type: RelationType;               // 关系类型
+  name: string;                     // 关系名称
+  inverseName?: string;             // 反向关系名称
   
   // 关系的两端
-  from: {
-    entityId: string;
-    fieldId: string;
-  };
-  to: {
-    entityId: string;
-    fieldId: string;
-  };
+  from: RelationEndpoint;           // 源实体端点
+  to: RelationEndpoint;             // 目标实体端点
   
   // 关系配置
-  config: {
-    cascade: boolean;        // 级联操作
-    onDelete: 'CASCADE' | 'SET NULL' | 'RESTRICT';
-    onUpdate: 'CASCADE' | 'SET NULL' | 'RESTRICT';
-    nullable: boolean;
-  };
+  config: RelationConfig;
   
-  // 关系名称
-  name?: string;
+  // 多对多关系特殊配置
+  joinTable?: JoinTableConfig;
+  
+  // 元数据
+  metadata: RelationMetadata;
+}
+
+// 关系创建配置
+export interface RelationCreateConfig {
+  type: RelationType;
+  fromEntityId: string;
+  toEntityId: string;
+  name: string;
   inverseName?: string;
+  config?: Partial<RelationConfig>;
+  joinTable?: Partial<JoinTableConfig>;
+  description?: string;
+  tags?: string[];
+}
+
+// 关系验证结果
+export interface RelationValidationResult {
+  isValid: boolean;
+  errors: RelationValidationError[];
+  warnings: RelationValidationWarning[];
+}
+
+// 关系验证错误
+export interface RelationValidationError {
+  code: string;
+  message: string;
+  field?: string;
+  severity: 'error' | 'warning';
+}
+
+// 关系验证警告
+export interface RelationValidationWarning {
+  code: string;
+  message: string;
+  suggestion?: string;
+}
+
+// 关系冲突
+export interface RelationConflict {
+  type: 'duplicate' | 'circular' | 'naming' | 'field_type';
+  message: string;
+  conflictingRelation?: Relation;
+  suggestion?: string;
+}
+
+// 关系建议
+export interface RelationSuggestion {
+  type: RelationType;
+  fromEntityId: string;
+  toEntityId: string;
+  confidence: number;
+  reason: string;
+  suggestedName: string;
+  suggestedInverseName?: string;
 }
 
 export interface AIModelConfig {

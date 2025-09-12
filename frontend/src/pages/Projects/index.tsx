@@ -307,7 +307,10 @@ const Projects: React.FC = () => {
           form.resetFields();
         }}
         footer={null}
+        maskClosable={false}
+        destroyOnHidden
         width={600}
+        style={{ paddingTop: 30 }}
       >
         <Form
           form={form}

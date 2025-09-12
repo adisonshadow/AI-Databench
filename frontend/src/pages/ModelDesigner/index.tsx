@@ -19,8 +19,8 @@ import {
   Flex
 } from 'antd';
 import { 
-  PlusOutlined, 
-  RobotOutlined, 
+  // PlusOutlined, 
+  // RobotOutlined, 
   PartitionOutlined,
   BuildOutlined,
   EditOutlined,
@@ -29,11 +29,13 @@ import {
   UnlockOutlined,
   MoreOutlined,
   CaretDownOutlined,
-  CaretRightOutlined
+  CaretRightOutlined,
+  DatabaseOutlined
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '@/stores/storage';
 import FieldsManager from '@/components/FieldsManager';
+import ADBEnumManager from '@/components/ADBEnumManager';
 import type { Project, ADBEntity } from '@/types/storage';
 import type { ColumnsType } from 'antd/es/table';
 import type { Key } from 'antd/es/table/interface';
@@ -70,6 +72,7 @@ const ModelDesigner: React.FC = () => {
   const [entityTreeData, setEntityTreeData] = useState<SchemaTreeItem[]>([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isEnumModalVisible, setIsEnumModalVisible] = useState(false);
   const [createForm] = Form.useForm();
 
   // 处理项目更新
@@ -429,6 +432,11 @@ const ModelDesigner: React.FC = () => {
     console.log('查看图谱');
   };
 
+  // 处理ADB枚举管理
+  const handleEnumManage = () => {
+    setIsEnumModalVisible(true);
+  };
+
   useEffect(() => {
     if (!projectId) {
       navigate('/');
@@ -493,18 +501,18 @@ const ModelDesigner: React.FC = () => {
                 <Space.Compact block>
                     <Button 
                     //   type="primary" 
-                    icon={<RobotOutlined />}
+                    // icon={<RobotOutlined />}
                     onClick={handleAICreateEntity}
                     size="small"
                     >
                     AI新建
                     </Button>
                     <Button 
-                    icon={<PlusOutlined />}
+                    // icon={<PlusOutlined />}
                     onClick={handleManualCreateEntity}
                     size="small"
                     >
-                    手工新建
+                    新建
                     </Button>
                 </Space.Compact>
                 <Button 
@@ -512,7 +520,14 @@ const ModelDesigner: React.FC = () => {
                   onClick={handleViewGraph}
                   size="small"
                 >
-                  图谱
+                  关系
+                </Button>
+                <Button 
+                  icon={<DatabaseOutlined />}
+                  onClick={handleEnumManage}
+                  size="small"
+                >
+                  枚举
                 </Button>
             </Space>
             
@@ -657,6 +672,7 @@ const ModelDesigner: React.FC = () => {
           onFinish={handleSaveEntity}
           layout="vertical"
           preserve={false}
+          style={{ paddingTop: 30 }}
         >
           <Form.Item
             name="code"
@@ -715,6 +731,14 @@ const ModelDesigner: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* ADB枚举管理模态框 */}
+      <ADBEnumManager
+        visible={isEnumModalVisible}
+        onClose={() => setIsEnumModalVisible(false)}
+        project={project!}
+        onProjectUpdate={handleProjectUpdate}
+      />
     </div>
   );
 };

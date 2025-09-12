@@ -3,51 +3,51 @@
  * 根据设计文档实现数据类型与配置项之间的关系
  */
 
-// 字段类型枚举
-export enum FieldType {
+// 字段类型常量
+export const FieldType = {
   // 字符串类型
-  VARCHAR = 'varchar',
-  CHAR = 'char',
-  TEXT = 'text',
-  LONGTEXT = 'longtext',
+  VARCHAR: 'varchar',
+  CHAR: 'char',
+  TEXT: 'text',
+  LONGTEXT: 'longtext',
   
   // 数字类型
-  INT = 'int',
-  BIGINT = 'bigint',
-  DECIMAL = 'decimal',
-  FLOAT = 'float',
-  DOUBLE = 'double',
+  INT: 'int',
+  BIGINT: 'bigint',
+  DECIMAL: 'decimal',
+  FLOAT: 'float',
+  DOUBLE: 'double',
   
   // 日期时间类型
-  DATE = 'date',
-  DATETIME = 'datetime',
-  TIMESTAMP = 'timestamp',
-  TIME = 'time',
+  DATE: 'date',
+  DATETIME: 'datetime',
+  TIMESTAMP: 'timestamp',
+  TIME: 'time',
   
   // 布尔类型
-  BOOLEAN = 'boolean',
+  BOOLEAN: 'boolean',
   
   // 二进制类型
-  BLOB = 'blob',
-  LONGBLOB = 'longblob',
+  BLOB: 'blob',
+  LONGBLOB: 'longblob',
   
   // ADB 扩展类型
-  ADB_MEDIA = 'adb-media',
-  ADB_ENUM = 'adb-enum',
-  ADB_AUTO_INCREMENT_ID = 'adb-auto-increment-id',
-  ADB_GUID_ID = 'adb-guid-id',
-  ADB_SNOWFLAKE_ID = 'adb-snowflake-id',
-}
+  ADB_MEDIA: 'adb-media',
+  ADB_ENUM: 'adb-enum',
+  ADB_AUTO_INCREMENT_ID: 'adb-auto-increment-id',
+  ADB_GUID_ID: 'adb-guid-id',
+  ADB_SNOWFLAKE_ID: 'adb-snowflake-id',
+} as const;
 
 // 字段类型分类
-export enum FieldCategory {
-  STRING = 'string',
-  NUMBER = 'number',
-  DATETIME = 'datetime',
-  BOOLEAN = 'boolean',
-  BINARY = 'binary',
-  ADB_EXTEND = 'adb-extend',
-}
+export const FieldCategory = {
+  STRING: 'string',
+  NUMBER: 'number',
+  DATETIME: 'datetime',
+  BOOLEAN: 'boolean',
+  BINARY: 'binary',
+  ADB_EXTEND: 'adb-extend',
+} as const;
 
 // 配置项类型
 export interface FieldConfig {
@@ -63,24 +63,25 @@ export interface FieldConfig {
   autoIncrementIdConfig: boolean; // 自增ID配置
   guidIdConfig: boolean;      // GUID ID配置
   snowflakeIdConfig: boolean; // 雪花ID配置
+  relationConfig: boolean;    // 关系配置
 }
 
 // 字段类型信息
 export interface FieldTypeInfo {
-  type: FieldType;
+  type: string;
   label: string;
-  category: FieldCategory;
+  category: string;
   description: string;
   config: FieldConfig;
 }
 
 // 字段类型配置映射
-export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
+export const FIELD_TYPE_CONFIGS: Record<string, FieldTypeInfo> = {
   // 字符串类型
-  [FieldType.VARCHAR]: {
-    type: FieldType.VARCHAR,
+  VARCHAR: {
+    type: 'VARCHAR',
     label: '变长字符串',
-    category: FieldCategory.STRING,
+    category: 'STRING',
     description: '可变长度的字符串，适合存储长度不固定的文本',
     config: {
       nullable: true,
@@ -95,12 +96,13 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: true,
     },
   },
-  [FieldType.CHAR]: {
-    type: FieldType.CHAR,
+  CHAR: {
+    type: 'CHAR',
     label: '定长字符串',
-    category: FieldCategory.STRING,
+    category: 'STRING',
     description: '固定长度的字符串，适合存储长度固定的文本',
     config: {
       nullable: true,
@@ -115,9 +117,10 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: true,
     },
   },
-  [FieldType.TEXT]: {
+  TEXT: {
     type: FieldType.TEXT,
     label: '长文本',
     category: FieldCategory.STRING,
@@ -135,6 +138,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.LONGTEXT]: {
@@ -155,6 +159,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
 
@@ -177,6 +182,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: true,
     },
   },
   [FieldType.BIGINT]: {
@@ -197,6 +203,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: true,
     },
   },
   [FieldType.DECIMAL]: {
@@ -217,6 +224,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.FLOAT]: {
@@ -237,6 +245,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.DOUBLE]: {
@@ -257,6 +266,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
 
@@ -279,6 +289,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.DATETIME]: {
@@ -299,6 +310,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.TIMESTAMP]: {
@@ -319,6 +331,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.TIME]: {
@@ -339,6 +352,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
 
@@ -361,6 +375,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
 
@@ -383,6 +398,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.LONGBLOB]: {
@@ -403,6 +419,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
 
@@ -425,6 +442,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.ADB_ENUM]: {
@@ -445,6 +463,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.ADB_AUTO_INCREMENT_ID]: {
@@ -465,6 +484,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: true,
       guidIdConfig: false,
       snowflakeIdConfig: false,
+      relationConfig: false,
     },
   },
   [FieldType.ADB_GUID_ID]: {
@@ -485,6 +505,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: true,
       snowflakeIdConfig: false,
+      relationConfig: true,
     },
   },
   [FieldType.ADB_SNOWFLAKE_ID]: {
@@ -505,6 +526,7 @@ export const FIELD_TYPE_CONFIGS: Record<FieldType, FieldTypeInfo> = {
       autoIncrementIdConfig: false,
       guidIdConfig: false,
       snowflakeIdConfig: true,
+      relationConfig: false,
     },
   },
 };
@@ -517,17 +539,17 @@ export interface DefaultValueOption {
 }
 
 // 获取字段类型信息
-export function getFieldTypeInfo(type: FieldType): FieldTypeInfo {
-  return FIELD_TYPE_CONFIGS[type];
+export function getFieldTypeInfo(type: string): FieldTypeInfo {
+  return FIELD_TYPE_CONFIGS[type as keyof typeof FieldType];
 }
 
 // 获取字段类型配置
-export function getFieldTypeConfig(type: FieldType): FieldConfig {
-  return FIELD_TYPE_CONFIGS[type].config;
+export function getFieldTypeConfig(type: string): FieldConfig {
+  return FIELD_TYPE_CONFIGS[type as keyof typeof FieldType].config;
 }
 
 // 检查配置项是否应该显示
-export function shouldShowConfig(type: FieldType, configKey: keyof FieldConfig): boolean {
+export function shouldShowConfig(type: string, configKey: keyof FieldConfig): boolean {
   const config = getFieldTypeConfig(type);
   return config[configKey];
 }
@@ -538,7 +560,7 @@ export function getAllFieldTypes(): FieldTypeInfo[] {
 }
 
 // 根据分类获取字段类型
-export function getFieldTypesByCategory(category: FieldCategory): FieldTypeInfo[] {
+export function getFieldTypesByCategory(category: string): FieldTypeInfo[] {
   return getAllFieldTypes().filter(type => type.category === category);
 }
 
@@ -575,7 +597,7 @@ export function getBooleanDefaultValueOptions(): DefaultValueOption[] {
 }
 
 // 根据字段类型获取默认值选项
-export function getDefaultValueOptions(type: FieldType): DefaultValueOption[] | null {
+export function getDefaultValueOptions(type: string, enumOptions?: Array<{value: string | number, label: string}>): DefaultValueOption[] | null {
   const fieldInfo = getFieldTypeInfo(type);
   
   switch (fieldInfo.category) {
@@ -588,13 +610,28 @@ export function getDefaultValueOptions(type: FieldType): DefaultValueOption[] | 
       return [
         { value: '', label: '空值', description: '不设置默认值' },
       ];
+    case FieldCategory.ADB_EXTEND:
+      // ADB枚举类型使用枚举选项作为默认值
+      if (type === FieldType.ADB_ENUM && enumOptions) {
+        return [
+          { value: '', label: '空值', description: '不设置默认值' },
+          ...enumOptions.map(option => ({
+            value: option.value.toString(),
+            label: option.label,
+            description: `枚举值: ${option.value}`
+          }))
+        ];
+      }
+      return [
+        { value: '', label: '空值', description: '不设置默认值' },
+      ];
     default:
       return null;
   }
 }
 
 // 根据具体日期时间类型获取默认值选项
-export function getDateTimeDefaultValueOptionsByType(type: FieldType): DefaultValueOption[] {
+export function getDateTimeDefaultValueOptionsByType(type: string): DefaultValueOption[] {
   switch (type) {
     case FieldType.DATE:
       return [
@@ -628,58 +665,64 @@ export function getDateTimeDefaultValueOptionsByType(type: FieldType): DefaultVa
 }
 
 // 检查字段类型是否适合作为主键
-export function isSuitableForPrimaryKey(type: FieldType): boolean {
+export function isSuitableForPrimaryKey(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.primary;
 }
 
 // 检查字段类型是否支持唯一约束
-export function supportsUniqueConstraint(type: FieldType): boolean {
+export function supportsUniqueConstraint(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.unique;
 }
 
 // 检查字段类型是否支持默认值
-export function supportsDefaultValue(type: FieldType): boolean {
+export function supportsDefaultValue(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.default;
 }
 
 // 检查字段类型是否需要长度配置
-export function requiresLengthConfig(type: FieldType): boolean {
+export function requiresLengthConfig(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.length;
 }
 
 // 检查字段类型是否需要精度配置
-export function requiresPrecisionConfig(type: FieldType): boolean {
+export function requiresPrecisionConfig(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.precision;
 }
 
 // 检查字段类型是否需要小数位配置
-export function requiresScaleConfig(type: FieldType): boolean {
+export function requiresScaleConfig(type: string): boolean {
   const config = getFieldTypeConfig(type);
   return config.scale;
 }
 
 // 检查字段类型是否为ADB扩展类型
-export function isADBExtendType(type: FieldType): boolean {
+export function isADBExtendType(type: string): boolean {
   const fieldInfo = getFieldTypeInfo(type);
   return fieldInfo.category === FieldCategory.ADB_EXTEND;
 }
 
 // 检查字段类型是否为ID类型
-export function isIDType(type: FieldType): boolean {
+export function isIDType(type: string): boolean {
   return [
     FieldType.ADB_AUTO_INCREMENT_ID,
     FieldType.ADB_GUID_ID,
     FieldType.ADB_SNOWFLAKE_ID,
-  ].includes(type);
+  ].includes(type as typeof FieldType.ADB_AUTO_INCREMENT_ID | typeof FieldType.ADB_GUID_ID | typeof FieldType.ADB_SNOWFLAKE_ID);
+}
+
+// 检查字段类型是否支持关系配置
+export function supportsRelationConfig(type: string): boolean {
+  const config = getFieldTypeConfig(type);
+  return config.relationConfig || false;
 }
 
 // 获取字段类型的智能提示
-export function getFieldTypeHint(type: FieldType): string {
+export function getFieldTypeHint(type: string): string {
   const fieldInfo = getFieldTypeInfo(type);
   
   if (isIDType(type)) {
@@ -702,7 +745,7 @@ export function getFieldTypeHint(type: FieldType): string {
 }
 
 // 验证字段配置的合理性
-export function validateFieldConfig(type: FieldType, config: Partial<FieldConfig>): string[] {
+export function validateFieldConfig(type: string, config: Partial<FieldConfig>): string[] {
   const errors: string[] = [];
   const fieldConfig = getFieldTypeConfig(type);
   
