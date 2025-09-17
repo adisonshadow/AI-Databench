@@ -72,14 +72,6 @@ body {
 }
 
 /* 模态框样式优化 */
-.ant-modal-content {
-  /* background-color: #1f1f1f !important; */
-}
-
-.ant-modal-header {
-  /* background-color: #262626 !important;
-  border-bottom-color: #15009b !important; */
-}
 
 .ant-modal-title {
   color: #ffffff !important;
@@ -90,32 +82,17 @@ body {
   color: #ffffff !important;
 }
 
-.ant-input {
+/* .ant-input-affix-wrapper {
   background-color: #262626 !important;
   border-color: #434343 !important;
-  color: #ffffff !important;
-}
-
-.ant-input:hover {
-  border-color: #1890ff !important;
-}
-
-.ant-input:focus {
-  border-color: #1890ff !important;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
-}
-
-.ant-input-affix-wrapper {
-  background-color: #262626 !important;
-  border-color: #434343 !important;
-}
+} */
 
 /* TextArea样式 */
-.ant-input {
+/* .ant-input {
   background-color: #262626 !important;
   border-color: #434343 !important;
   color: #ffffff !important;
-}
+} */
 
 /* 按钮样式优化 */
 .ant-btn-default {
@@ -174,3 +151,103 @@ body {
 .ant-modal-header {
   background-color: transparent !important;
 } 
+
+.ant-layout-header {
+  line-height: 1 !important;
+  height: 48px !important;
+}
+
+/* 导航菜单按钮样式 */
+.nav-menu-button {
+  position: relative;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  transition: all 0.3s ease !important;
+  padding: 8px 16px !important;
+  border-radius: 4px !important;
+}
+
+.nav-menu-button:hover {
+  background: rgba(24, 144, 255, 0.1) !important;
+  color: #40a9ff !important;
+}
+
+.nav-menu-button.active {
+  background: transparent !important;
+  color: #1890ff !important;
+}
+
+.nav-menu-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background-color: #1890ff;
+  border-radius: 1px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+  }
+  to {
+    width: 80%;
+  }
+}
+
+/* ResizableLayout 样式 */
+.resizable-layout {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+.resizable-panel {
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.resizable-handle {
+  flex-shrink: 0;
+  position: relative;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.resizable-handle:hover {
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+.resizable-handle.active {
+  background-color: #1890ff;
+}
+
+/* 确保拖拽时不会选中文本 */
+.resizable-layout.resizing {
+  user-select: none;
+}
+
+.resizable-layout.resizing * {
+  user-select: none;
+  pointer-events: none;
+}
+
+.resizable-layout.resizing .resizable-handle {
+  pointer-events: auto;
+}
+
+
+.ai-model-select-dropdown {
+  min-width: 120px !important;
+}
+
+.ai-select {
+  min-width: 120px !important;
+}

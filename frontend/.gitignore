@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-Documents/关联项目地址.md
+../Documents/关联项目地址.md
 
 node_modules
 dist

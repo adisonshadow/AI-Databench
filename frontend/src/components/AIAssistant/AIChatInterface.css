@@ -1,0 +1,130 @@
+/* AI聊天界面样式 */
+.ant-bubble .ant-bubble-content-wrapper {
+  margin: 0px !important;
+}
+
+.ant-bubble .ant-bubble-header {
+  font-size: 13px;
+  color: gray;
+}
+
+.ant-bubble-start .ant-bubble-header {
+  display: none;
+}
+
+.ant-bubble-start .ant-bubble-content {
+  padding: 0px !important;
+  border: none !important;
+}
+
+.ant-bubble-end .ant-bubble-header {
+  display: none;
+}
+
+.ant-bubble-end .ant-bubble-content {
+  padding: 4px 10px !important;
+  border: none !important;
+  min-height: auto !important;
+}
+
+/* 聊天消息容器样式 */
+.chat-messages {
+  padding: 16px;
+  background-color: #1f1f1f;
+}
+
+/* 聊天输入容器样式 */
+.chat-input-container {
+  padding: 16px;
+  border-top: 1px solid #303030;
+  background-color: #262626;
+}
+
+/* 头部样式 */
+.chat-header {
+  padding: 16px;
+  border-bottom: 1px solid #303030;
+  background-color: #262626;
+}
+
+/* 用户消息样式 */
+.user-message {
+  background-color: #1890ff;
+  color: #fff;
+}
+
+/* AI助手消息样式 */
+.assistant-message {
+  background-color: #262626;
+  border: 1px solid #303030;
+  color: #fff;
+}
+
+/* 系统消息样式 */
+.system-message {
+  background-color: #262626;
+  border: 1px solid #303030;
+  color: #8c8c8c;
+}
+
+/* 加载状态样式 */
+.loading-message {
+  opacity: 0.7;
+}
+
+/* 流式聊天指示器 */
+.stream-indicator {
+  color: #52c41a;
+  font-size: 12px;
+}
+
+/* 错误消息样式 */
+.error-message {
+  color: #ff4d4f;
+  background-color: #2a1215;
+  border: 1px solid #58191c;
+}
+
+/* 附件区域样式 */
+.attachments-area {
+  background-color: #1f1f1f;
+  border: 1px dashed #303030;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+
+/* 发送按钮样式 */
+.send-button {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+.send-button:hover {
+  background-color: #40a9ff;
+  border-color: #40a9ff;
+}
+
+/* 语音按钮样式 */
+.speech-button {
+  color: #666;
+}
+
+.speech-button:hover {
+  color: #1890ff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .chat-messages {
+    padding: 8px;
+  }
+  
+  .chat-input-container {
+    padding: 8px;
+  }
+  
+  .ant-bubble .ant-bubble-content-wrapper {
+    margin: 5px;
+  }
+}

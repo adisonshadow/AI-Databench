@@ -36,9 +36,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '@/stores/storage';
 import FieldsManager from '@/components/FieldsManager';
 import ADBEnumManager from '@/components/ADBEnumManager';
+import AIAddNewEntities from '@/components/AIAssistant/AIAddNewEntitis';
 import type { Project, ADBEntity } from '@/types/storage';
 import type { ColumnsType } from 'antd/es/table';
 import type { Key } from 'antd/es/table/interface';
+import Lottie from '@/components/Lottie';
+
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -73,6 +76,7 @@ const ModelDesigner: React.FC = () => {
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEnumModalVisible, setIsEnumModalVisible] = useState(false);
+  const [isAICreateModalVisible, setIsAICreateModalVisible] = useState(false);
   const [createForm] = Form.useForm();
 
   // 处理项目更新
@@ -361,8 +365,34 @@ const ModelDesigner: React.FC = () => {
 
   // 处理AI新建实体
   const handleAICreateEntity = () => {
-    // TODO: 打开AI创建实体对话框
-    console.log('AI新建实体');
+    setIsAICreateModalVisible(true);
+  };
+
+  // 处理AI创建的实体
+  const handleAIEntityCreated = (entity: ADBEntity) => {
+    if (!project) return;
+
+    try {
+      const updatedProject = {
+        ...project,
+        schema: {
+          ...project.schema,
+          entities: {
+            ...project.schema.entities,
+            [entity.entityInfo.id]: entity
+          }
+        }
+      };
+
+      StorageService.saveProject(updatedProject);
+      handleProjectUpdate(updatedProject);
+      
+      message.success('AI创建的实体已保存');
+      setIsAICreateModalVisible(false);
+    } catch (error) {
+      console.error('保存AI创建的实体失败:', error);
+      message.error('保存AI创建的实体失败');
+    }
   };
 
   // 处理手工新建实体
@@ -484,10 +514,10 @@ const ModelDesigner: React.FC = () => {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Splitter style={{ height: '100%' }}>
         {/* 左侧：实体管理 */}
-        <Splitter.Panel defaultSize="30%" min="20%" max="50%">
+        <Splitter.Panel defaultSize="45%" min="30%" max="60%">
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* 实体管理头部 */}
             <Space style={{ 
@@ -502,13 +532,16 @@ const ModelDesigner: React.FC = () => {
                     <Button 
                     //   type="primary" 
                     // icon={<RobotOutlined />}
+                    type="text"
                     onClick={handleAICreateEntity}
                     size="small"
                     >
+                      {/* <Lottie filename="AI-assistant" style={{ width: 32, height: 32 }} /> */}
                     AI新建
                     </Button>
                     <Button 
                     // icon={<PlusOutlined />}
+                    type="text"
                     onClick={handleManualCreateEntity}
                     size="small"
                     >
@@ -517,6 +550,7 @@ const ModelDesigner: React.FC = () => {
                 </Space.Compact>
                 <Button 
                   icon={<PartitionOutlined />}
+                  type="text"
                   onClick={handleViewGraph}
                   size="small"
                 >
@@ -524,6 +558,7 @@ const ModelDesigner: React.FC = () => {
                 </Button>
                 <Button 
                   icon={<DatabaseOutlined />}
+                  type="text"
                   onClick={handleEnumManage}
                   size="small"
                 >
@@ -738,6 +773,14 @@ const ModelDesigner: React.FC = () => {
         onClose={() => setIsEnumModalVisible(false)}
         project={project!}
         onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* AI新建实体模态框 */}
+      <AIAddNewEntities
+        visible={isAICreateModalVisible}
+        onClose={() => setIsAICreateModalVisible(false)}
+        project={project!}
+        onEntityCreated={handleAIEntityCreated}
       />
     </div>
   );
