@@ -4,7 +4,7 @@
 
 AIDatabench 是一个利用 AI 并 基于 ADB-TypeORM 的数据应用设计工具 ，为用户提供智能化的数据库实体设计、关系管理和服务生成功能。
 
-<img src="https://raw.githubusercontent.com/adisonshadow/AI-Databench/main/Screenshots/p1.png" alt="Main UI">
+<img src="https://raw.githubusercontent.com/adisonshadow/AI-Databench/refs/heads/main/Screenshots/p1.png" alt="Main UI">
 
 ## 🚀 核心功能
 
