@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Layout as AntLayout, Button, Space, Divider, Tooltip } from 'antd';
+import { Layout as AntLayout, Button, Space, Divider, Tooltip, Splitter } from 'antd';
 import { 
   DesktopOutlined, 
   SettingOutlined,
@@ -13,7 +13,7 @@ import { StorageService } from '@/stores/storage';
 import type { Project } from '@/types/storage';
 import AISelector from '@/components/AISelector';
 import AIChatInterface from '@/components/AIAssistant/AIChatInterface';
-import { ResizableLayout, ResizablePanel, ResizableHandle } from '@/components/ResizableLayout';
+// import { ResizableLayout, ResizablePanel, ResizableHandle } from '@/components/ResizableLayout';
 
 const { Content, Header } = AntLayout;
 
@@ -22,6 +22,7 @@ const LayoutContent: React.FC = () => {
   const navigate = useNavigate();
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [aiChatVisible, setAiChatVisible] = useState(true);
+  const [projectUpdateKey, setProjectUpdateKey] = useState(0);
   
   // 判断是否在ORM设计器页面
   const isDesignerPage = location.pathname.startsWith('/project/');
@@ -43,7 +44,7 @@ const LayoutContent: React.FC = () => {
     } else {
       setCurrentProject(null);
     }
-  }, [location.pathname, isDesignerPage]);
+  }, [location.pathname, isDesignerPage, projectUpdateKey]);
   
   // 获取当前激活的tab
   const getCurrentTab = () => {
@@ -63,6 +64,14 @@ const LayoutContent: React.FC = () => {
   // 处理AI聊天按钮点击
   const handleAiChatClick = () => {
     setAiChatVisible(!aiChatVisible);
+  };
+
+  // 处理项目更新
+  const handleProjectUpdate = (updatedProject: Project) => {
+    // 更新当前项目状态
+    setCurrentProject(updatedProject);
+    // 触发重新渲染，通知子组件项目已更新
+    setProjectUpdateKey(prev => prev + 1);
   };
   
   // 如果在项目管理页面，使用简单布局
@@ -152,12 +161,12 @@ const LayoutContent: React.FC = () => {
                   // aiModelSelected 会自动处理模型选择
                 }}
               />
-              <Button
+              {/* <Button
                 type={aiChatVisible ? 'primary' : 'text'}
                 icon={<MessageOutlined />}
                 onClick={handleAiChatClick}
                 style={{ color: aiChatVisible ? undefined : '#fff' }}
-              />
+              /> */}
               <Button
                 type="text"
                 icon={<SettingOutlined />}
@@ -168,40 +177,38 @@ const LayoutContent: React.FC = () => {
           </div>
         </Header>
         
-        <ResizableLayout style={{ height: 'calc(100vh - 50px)' }}>
-          <Content style={{ margin: '0px', overflow: 'auto', flex: 1 }}>
+        <Splitter style={{ height: 'calc(100vh - 50px)' }}>
+          <Splitter.Panel>
             <div style={{ 
               background: '#1f1f1f', 
-              minHeight: 'calc(100vh - 75px)',
+              minHeight: 'calc(100vh - 50px)',
+              overflow: 'auto',
               // borderRadius: '8px',
               height: '100%'
             }}>
               <Outlet />
             </div>
-          </Content>
+          </Splitter.Panel>
           
           {/* AI聊天界面 Sider */}
-          {aiChatVisible && (
-            <>
-              <ResizableHandle />
-              <ResizablePanel
-                defaultSize={320}
-                minSize={280}
-                maxSize={500}
-                style={{
-                  backgroundColor: '#1f1f1f',
-                  borderLeft: '1px solid #303030'
-                }}
-              >
-                <AIChatInterface 
-                  visible={aiChatVisible}
-                  onClose={() => setAiChatVisible(false)}
-                  style={{ height: '100%' }}
-                />
-              </ResizablePanel>
-            </>
-          )}
-        </ResizableLayout>
+          <Splitter.Panel 
+              // className={`${aiChatVisible?'':'ant-splitter-panel-hidden'}`} 
+              defaultSize={320} 
+              min="20%" 
+              max="70%"
+              collapsible
+            >
+            {/* {aiChatVisible && ( */}
+              <AIChatInterface 
+                // visible={aiChatVisible}
+                onClose={() => setAiChatVisible(false)}
+                // style={{ height: '100%', display: aiChatVisible?`flex`:`none` }}
+                style={{ height: '100%'}}
+                onProjectUpdate={handleProjectUpdate}
+              />
+            {/* )} */}
+          </Splitter.Panel>
+        </Splitter>
       </AntLayout>
     );
   }

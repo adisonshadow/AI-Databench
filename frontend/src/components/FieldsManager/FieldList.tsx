@@ -1,10 +1,12 @@
 import React from 'react';
-import { Table, Tag, Space, Button, Popconfirm, Empty, Typography } from 'antd';
+import { Table, Tag, Space, Button, Popconfirm, Empty, Typography, Dropdown, Flex } from 'antd';
 import { 
   EditOutlined, 
   DeleteOutlined,
   KeyOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  MoreOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { ADBField } from '@/types/storage';
@@ -15,9 +17,10 @@ interface FieldListProps {
   fields: ADBField[];
   onEdit: (field: ADBField) => void;
   onDelete: (field: ADBField) => void;
+  onAddToChat: (field: ADBField) => void;
 }
 
-const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete }) => {
+const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddToChat }) => {
   // 表格列定义
   const columns: ColumnsType<ADBField> = [
     {
@@ -44,10 +47,12 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete }) => {
       width: 120
     },
     {
-      title: '数据类型',
-      key: 'type',
-      width: 120,
+      title: '信息',
+      key: 'desc',
       render: (_, record: ADBField) => {
+
+        /////////数据类型
+
         const { type, length, precision, scale } = record.typeormConfig;
         const { extendType } = record.columnInfo;
         
@@ -70,63 +75,129 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete }) => {
           }
           return 'blue'; // TypeORM 原生类型使用蓝色
         };
+
+        /////////默认值
         
-        return <Tag color={getTagColor(displayType)}>{typeDisplay.toUpperCase()}</Tag>;
+        return (<Space size={2}>
+            <Tag color={getTagColor(displayType)}>{typeDisplay.toUpperCase()}</Tag>
+            {!record.typeormConfig.nullable && <Tag color="red">NOT NULL</Tag>}
+            {record.typeormConfig.unique && <Tag color="green">UNIQUE</Tag>}
+            {record.typeormConfig.default !== undefined && (
+              <Tag color="orange">DEFAULT</Tag>
+            )}
+            {record.typeormConfig.default !== undefined && (
+              <code>{String(record.typeormConfig.default)}</code> 
+            )}
+          </Space>);
       }
     },
-    {
-      title: '约束',
-      key: 'constraints',
-      width: 100,
-      render: (_, record: ADBField) => (
-        <Space size={4}>
-          {!record.typeormConfig.nullable && <Tag color="red">NOT NULL</Tag>}
-          {record.typeormConfig.unique && <Tag color="green">UNIQUE</Tag>}
-          {record.typeormConfig.default !== undefined && (
-            <Tag color="orange">DEFAULT</Tag>
-          )}
-        </Space>
-      )
-    },
-    {
-      title: '默认值',
-      dataIndex: ['typeormConfig', 'default'],
-      key: 'default',
-      width: 100,
-      render: (defaultValue: string | number | boolean | undefined) => (
-        defaultValue !== undefined ? <code>{String(defaultValue)}</code> : <Text type="secondary">-</Text>
-      )
-    },
+    // {
+    //   title: '数据类型',
+    //   key: 'type',
+    //   width: 120,
+    //   render: (_, record: ADBField) => {
+    //     const { type, length, precision, scale } = record.typeormConfig;
+    //     const { extendType } = record.columnInfo;
+        
+    //     // 如果有扩展类型，优先显示扩展类型
+    //     const displayType = extendType || type;
+    //     let typeDisplay = displayType;
+        
+    //     if (length) {
+    //       typeDisplay += `(${length})`;
+    //     } else if (precision !== undefined && scale !== undefined) {
+    //       typeDisplay += `(${precision},${scale})`;
+    //     } else if (precision !== undefined) {
+    //       typeDisplay += `(${precision})`;
+    //     }
+        
+    //     // 根据类型设置不同的颜色
+    //     const getTagColor = (type: string): string => {
+    //       if (type.startsWith('adb-')) {
+    //         return 'purple'; // ADB 扩展类型使用紫色
+    //       }
+    //       return 'blue'; // TypeORM 原生类型使用蓝色
+    //     };
+        
+    //     return <Tag color={getTagColor(displayType)}>{typeDisplay.toUpperCase()}</Tag>;
+    //   }
+    // },
+    // {
+    //   title: '约束',
+    //   key: 'constraints',
+    //   width: 100,
+    //   render: (_, record: ADBField) => (
+    //     <Space size={4}>
+    //       {!record.typeormConfig.nullable && <Tag color="red">NOT NULL</Tag>}
+    //       {record.typeormConfig.unique && <Tag color="green">UNIQUE</Tag>}
+    //       {record.typeormConfig.default !== undefined && (
+    //         <Tag color="orange">DEFAULT</Tag>
+    //       )}
+    //     </Space>
+    //   )
+    // },
+    // {
+    //   title: '默认值',
+    //   dataIndex: ['typeormConfig', 'default'],
+    //   key: 'default',
+    //   width: 100,
+    //   render: (defaultValue: string | number | boolean | undefined) => (
+    //     defaultValue !== undefined ? <code>{String(defaultValue)}</code> : <Text type="secondary">-</Text>
+    //   )
+    // },
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 40,
       fixed: 'right',
-      render: (_, record: ADBField) => (
-        <Space size="small">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
-            size="small"
-            onClick={() => onEdit(record)}
-          />
-          <Popconfirm
-            title="确定删除此字段？"
-            description="删除后将无法恢复，相关关系也会被清除"
-            onConfirm={() => onDelete(record)}
-            okText="删除"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
-          >
-            <Button 
-              type="text" 
-              icon={<DeleteOutlined />} 
-              size="small"
-              danger
-            />
-          </Popconfirm>
-        </Space>
-      )
+      render: (_, record: ADBField) => {
+        const dropdownItems = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => onEdit(record)
+          },
+          {
+            key: 'addToChat',
+            label: '添加字段到AI Chat',
+            icon: <MessageOutlined />,
+            onClick: () => onAddToChat(record)
+          },
+          {
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            onClick: () => {
+              // 这里需要处理删除确认，但由于Dropdown的限制，我们需要用其他方式
+              onDelete(record);
+            }
+          }
+        ];
+        
+        return (
+          <Flex justify='end'>
+            <Dropdown
+              menu={{
+                items: dropdownItems.map(item => ({
+                  ...item,
+                  onClick: () => {
+                    item.onClick();
+                  }
+                }))
+              }}
+              trigger={['click']}
+            >
+              <Button
+                type="link"
+                icon={<MoreOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Dropdown>
+          </Flex>
+        );
+      }
     }
   ];
 

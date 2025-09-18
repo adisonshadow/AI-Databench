@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Button, 
   Space, 
-  Typography, 
+  Typography,
 //   Avatar, 
   Tooltip,
   Badge,
   Flex,
   Divider,
+  Tag,
   type GetProp,
   type GetRef
 } from 'antd';
@@ -23,7 +24,8 @@ import { getSelectedAIModelConfig } from './utils/AIModel.ts';
 import { SmartRenderer } from './utils/SmartRenderer.tsx';
 import { AIAssistantIntegration } from './utils/AIAssistantIntegration';
 import { StorageService } from '@/stores/storage';
-import type { ADBEntity } from '@/types/storage';
+import { projectStore, type AIChatContext } from '@/stores/projectStore';
+import type { ADBEntity, Project } from '@/types/storage';
 
 
 import './AIChatInterface.css';
@@ -41,7 +43,7 @@ interface ChatMessage {
     color: string;
     icon?: string;
   }>;
-  operationData?: any;
+  operationData?: unknown;
   requiresConfirmation?: boolean;
 }
 
@@ -72,6 +74,7 @@ interface AIChatInterfaceProps {
   onClose?: () => void;
   className?: string;
   style?: React.CSSProperties;
+  onProjectUpdate?: (project: Project) => void;
 }
 
 // 创建真实AI发送器
@@ -111,7 +114,8 @@ const createRealAISender = (config: AIModelConfig): IAIModelSender => {
 const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   visible = true,
   className,
-  style
+  style,
+  onProjectUpdate
 }) => {
   const [selectedModel, setSelectedModel] = useState<AIModelConfig | null>(null);
   const [aiIntegration] = useState(() => new AIAssistantIntegration());
@@ -145,6 +149,9 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<GetProp<AttachmentsProps, 'items'>>([]);
   
+  // AI聊天上下文状态
+  const [aiChatContexts, setAiChatContexts] = useState<AIChatContext[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
 
@@ -174,6 +181,18 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
     return () => {
       unsubscribe();
     };
+  }, []);
+
+  // 监听AI聊天上下文变化
+  useEffect(() => {
+    const unsubscribe = projectStore.subscribe(() => {
+      setAiChatContexts(projectStore.getAIChatContexts());
+    });
+
+    // 初始化时获取当前上下文
+    setAiChatContexts(projectStore.getAIChatContexts());
+
+    return unsubscribe;
   }, []);
 
   // 自动滚动到底部
@@ -207,11 +226,20 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         case 'create_entity':
           await createEntityFromAI(opData.entityData, activeProject);
           break;
+        case 'create_field':
+          await createFieldFromAI(opData.entityData, activeProject);
+          break;
+        case 'update_field':
+          await updateFieldFromAI(opData.entityData, activeProject);
+          break;
+        case 'delete_field':
+          await deleteFieldFromAI(opData.entityData, activeProject);
+          break;
         case 'update_entity':
-          await updateEntityFromAI(opData.entityData, activeProject);
+          await updateEntityFromAI();
           break;
         case 'delete_entity':
-          await deleteEntityFromAI(opData.entityData, activeProject);
+          await deleteEntityFromAI();
           break;
         default:
           console.log('暂不支持的操作类型:', opData.operationType);
@@ -238,12 +266,12 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         throw new Error('entityData 不是有效的对象');
       }
       
-      const data = entityData as any; // 临时使用 any 类型
+      const data = entityData as Record<string, unknown>; // 使用 Record 类型
       
       const projectData = project as {
         id: string;
         schema: {
-          entities: Record<string, any>;
+          entities: Record<string, unknown>;
         };
       };
       
@@ -254,10 +282,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       console.log('🔍 实体ID:', entityId);
       
       // 检查必要字段
-      if (!data.code) {
+      if (!data.code || typeof data.code !== 'string') {
         throw new Error('缺少实体代码 (code)');
       }
-      if (!data.label) {
+      if (!data.label || typeof data.label !== 'string') {
         throw new Error('缺少实体标签 (label)');
       }
       
@@ -265,14 +293,14 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       const newEntity: ADBEntity = {
         entityInfo: {
           id: entityId,
-          code: data.code,
-          label: data.label,
-          tableName: data.tableName || data.code.replace(/:/g, '_'),
-          description: data.description || '',
+          code: data.code as string,
+          label: data.label as string,
+          tableName: (data.tableName as string) || (data.code as string).replace(/:/g, '_'),
+          description: (data.description as string) || '',
           status: 'enabled',
           isLocked: false,
           tags: [],
-          comment: data.comment || data.description || ''
+          comment: (data.comment as string) || (data.description as string) || ''
         },
         fields: {},
         createdAt: now,
@@ -283,7 +311,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       if (data.fields && Array.isArray(data.fields)) {
         console.log('🔍 处理字段数据:', data.fields);
         for (let index = 0; index < data.fields.length; index++) {
-          const fieldData = data.fields[index];
+          const fieldData = data.fields[index] as Record<string, unknown>;
           console.log(`🔍 处理字段 ${index}:`, fieldData);
           
           try {
@@ -304,22 +332,22 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
             newEntity.fields[fieldId] = {
               columnInfo: {
                 id: fieldId,
-                label: fieldData.label || '',
-                code: fieldData.code || '',
-                extendType: fieldData.type && fieldData.type.startsWith('adb-') ? fieldData.type : undefined,
-                comment: fieldData.comment || '',
+                label: (fieldData.label as string) || '',
+                code: (fieldData.code as string) || '',
+                extendType: fieldData.type && (fieldData.type as string).startsWith('adb-') ? (fieldData.type as string) : undefined,
+                comment: (fieldData.comment as string) || '',
                 status: 'enabled',
                 orderIndex: index
               },
               typeormConfig: {
-                type: fieldData.type || 'varchar',
-                length: fieldData.length,
-                nullable: fieldData.nullable || false,
+                type: (fieldData.type as string) || 'varchar',
+                length: fieldData.length as number,
+                nullable: (fieldData.nullable as boolean) || false,
                 unique: false,
-                default: fieldData.default,
-                primary: fieldData.isPrimary || false,
-                generated: fieldData.type && (fieldData.type.includes('snowflake') || fieldData.type.includes('guid') || fieldData.type.includes('auto-increment')),
-                comment: fieldData.comment || ''
+                default: fieldData.default as string,
+                primary: (fieldData.isPrimary as boolean) || false,
+                generated: fieldData.type && ((fieldData.type as string).includes('snowflake') || (fieldData.type as string).includes('guid') || (fieldData.type as string).includes('auto-increment')),
+                comment: (fieldData.comment as string) || ''
               },
               createdAt: now,
               updatedAt: now
@@ -350,6 +378,14 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       StorageService.saveProject(updatedProject as Project);
       
       console.log('✅ 成功创建实体:', newEntity.entityInfo.label);
+      
+      // 通知父组件项目已更新
+      if (onProjectUpdate) {
+        onProjectUpdate(updatedProject as Project);
+      }
+      
+      // 通知全局项目存储项目已更新
+      projectStore.notifyUpdate();
       
       // 显示成功消息
       const successMessage: ChatMessage = {
@@ -383,13 +419,455 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
     }
   };
 
+  // 从 AI 数据创建字段
+  const createFieldFromAI = async (entityData: unknown, project: unknown) => {
+    try {
+      console.log('🔍 开始创建字段，原始数据:', entityData);
+      console.log('🔍 项目数据:', project);
+
+      const { v4: uuidv4 } = await import('uuid');
+      const now = new Date().toISOString();
+
+      // 检查 entityData 是否存在
+      if (!entityData || typeof entityData !== 'object') {
+        throw new Error('entityData 不是有效的对象');
+      }
+
+      const data = entityData as Record<string, unknown>;
+      
+      // 如果data包含operationType，说明这是完整的操作数据，需要提取entityData
+      let actualEntityData = data;
+      if (data.operationType && data.entityData) {
+        actualEntityData = data.entityData as Record<string, unknown>;
+        console.log('🔍 提取的实体数据:', actualEntityData);
+      }
+      
+      const projectData = project as {
+        id: string;
+        schema: {
+          entities: Record<string, unknown>;
+        };
+      };
+      
+      console.log('🔍 实体数据解析:', actualEntityData);
+
+      // 检查必要字段
+      if (!actualEntityData.code || typeof actualEntityData.code !== 'string') {
+        throw new Error('缺少实体代码 (code)');
+      }
+
+      // 查找目标实体
+      const targetEntity = Object.values(projectData.schema.entities).find((entity: unknown) => {
+        const entityInfo = (entity as { entityInfo: { code: string } }).entityInfo;
+        return entityInfo.code === actualEntityData.code;
+      }) as { entityInfo: { id: string; label: string; code: string }; fields: Record<string, unknown> };
+
+      if (!targetEntity) {
+        throw new Error(`找不到实体: ${actualEntityData.code}`);
+      }
+
+      console.log('🔍 找到目标实体:', targetEntity.entityInfo.label);
+
+      // 处理字段
+      if (actualEntityData.fields && Array.isArray(actualEntityData.fields)) {
+        console.log('🔍 处理字段数据:', actualEntityData.fields);
+        
+        const updatedFields = { ...targetEntity.fields };
+        
+        for (let index = 0; index < actualEntityData.fields.length; index++) {
+          const fieldData = actualEntityData.fields[index] as Record<string, unknown>;
+          console.log(`🔍 处理字段 ${index}:`, fieldData);
+          
+          try {
+            // 检查字段数据结构
+            if (!fieldData || typeof fieldData !== 'object') {
+              console.error('❌ 字段数据不是对象:', fieldData);
+              continue;
+            }
+            
+            if (!fieldData.code || !fieldData.label || !fieldData.type) {
+              console.error('❌ 字段缺少必要信息:', fieldData);
+              continue;
+            }
+            
+            const fieldId = uuidv4();
+            console.log(`🔍 生成字段ID: ${fieldId} for field: ${fieldData.code}`);
+            
+            updatedFields[fieldId] = {
+              columnInfo: {
+                id: fieldId,
+                label: (fieldData.label as string) || '',
+                code: (fieldData.code as string) || '',
+                comment: (fieldData.comment as string) || '',
+                status: 'enabled',
+                orderIndex: Object.keys(updatedFields).length
+              },
+              typeormConfig: {
+                type: (fieldData.type as string) || 'varchar',
+                length: fieldData.length as number,
+                nullable: (fieldData.nullable as boolean) || false,
+                unique: false,
+                default: fieldData.default as string,
+                primary: (fieldData.isPrimary as boolean) || false,
+                comment: (fieldData.comment as string) || ''
+              },
+              createdAt: now,
+              updatedAt: now
+            };
+            
+            console.log(`✅ 字段创建成功: ${fieldData.code}`);
+          } catch (fieldError) {
+            console.error(`❌ 字段 ${index} 创建失败:`, fieldError);
+            continue;
+          }
+        }
+        
+        // 更新实体
+        const updatedEntity = {
+          ...targetEntity,
+          fields: updatedFields,
+          updatedAt: now
+        };
+        
+        // 更新项目
+        const updatedProject = {
+          ...projectData,
+          schema: {
+            ...projectData.schema,
+            entities: {
+              ...projectData.schema.entities,
+              [targetEntity.entityInfo.id]: updatedEntity
+            }
+          },
+          updatedAt: now
+        };
+        
+        // 保存到存储
+        StorageService.saveProject(updatedProject as Project);
+        
+        console.log('✅ 成功更新实体字段:', targetEntity.entityInfo.label);
+        
+        // 通知父组件项目已更新
+        if (onProjectUpdate) {
+          onProjectUpdate(updatedProject as Project);
+        }
+        
+        // 通知全局项目存储项目已更新
+        projectStore.notifyUpdate();
+        
+        // 显示成功消息
+        const successMessage: ChatMessage = {
+          role: 'assistant',
+          content: `✅ 已成功在实体 "${targetEntity.entityInfo.label}" 中添加字段`,
+          badges: [{
+            type: 'success',
+            text: '字段已添加',
+            color: '#52c41a',
+            icon: 'plus-circle'
+          }]
+        };
+        
+        setMessages(prev => [...prev, successMessage]);
+      }
+      
+    } catch (error) {
+      console.error('创建字段失败:', error);
+      
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: `❌ 创建字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        badges: [{
+          type: 'error',
+          text: '创建失败',
+          color: '#ff4d4f',
+          icon: 'exclamation-circle'
+        }]
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
+  // 从 AI 数据更新字段
+  const updateFieldFromAI = async (entityData: unknown, project: unknown) => {
+    try {
+      console.log('🔍 开始更新字段，原始数据:', entityData);
+      const now = new Date().toISOString();
+      
+      if (!entityData || typeof entityData !== 'object') {
+        throw new Error('entityData 不是有效的对象');
+      }
+      
+      const data = entityData as Record<string, unknown>;
+      
+      // 如果data包含operationType，说明这是完整的操作数据，需要提取entityData
+      let actualEntityData = data;
+      if (data.operationType && data.entityData) {
+        actualEntityData = data.entityData as Record<string, unknown>;
+        console.log('🔍 提取的实体数据:', actualEntityData);
+      }
+      const projectData = project as {
+        id: string;
+        schema: {
+          entities: Record<string, unknown>;
+        };
+      };
+      
+      if (!actualEntityData.code || typeof actualEntityData.code !== 'string') {
+        throw new Error('缺少实体代码 (code)');
+      }
+      
+      // 查找目标实体
+      const targetEntity = Object.values(projectData.schema.entities).find((entity: unknown) => {
+        const entityInfo = (entity as { entityInfo: { code: string } }).entityInfo;
+        return entityInfo.code === actualEntityData.code;
+      }) as { entityInfo: { id: string; label: string; code: string }; fields: Record<string, unknown> };
+      
+      if (!targetEntity) {
+        throw new Error(`找不到实体: ${actualEntityData.code}`);
+      }
+      
+      console.log('🔍 找到目标实体:', targetEntity.entityInfo.label);
+      
+      // 处理字段更新
+      if (actualEntityData.fields && Array.isArray(actualEntityData.fields)) {
+        const updatedFields = { ...targetEntity.fields };
+        
+        for (const fieldData of actualEntityData.fields as Record<string, unknown>[]) {
+          if (!fieldData || typeof fieldData !== 'object') continue;
+          
+          const fieldCode = fieldData.code as string;
+          if (!fieldCode) continue;
+          
+          // 查找现有字段
+          const existingField = Object.values(updatedFields).find((field: unknown) => {
+            const fieldInfo = (field as { columnInfo: { code: string } }).columnInfo;
+            return fieldInfo.code === fieldCode;
+          }) as { columnInfo: { id: string } };
+          
+          if (existingField) {
+            // 更新现有字段
+            const currentField = updatedFields[existingField.columnInfo.id] as {
+              columnInfo: { label: string; comment: string };
+              typeormConfig: { type: string; length: number; nullable: boolean; comment: string };
+            };
+            
+            updatedFields[existingField.columnInfo.id] = {
+              ...currentField,
+              columnInfo: {
+                ...currentField.columnInfo,
+                label: (fieldData.label as string) || currentField.columnInfo.label,
+                comment: (fieldData.comment as string) || currentField.columnInfo.comment,
+              },
+              typeormConfig: {
+                ...currentField.typeormConfig,
+                type: (fieldData.type as string) || currentField.typeormConfig.type,
+                length: fieldData.length as number || currentField.typeormConfig.length,
+                nullable: (fieldData.nullable as boolean) ?? currentField.typeormConfig.nullable,
+                comment: (fieldData.comment as string) || currentField.typeormConfig.comment,
+              },
+              updatedAt: now
+            };
+            
+            console.log(`✅ 字段更新成功: ${fieldCode}`);
+          }
+        }
+        
+        // 更新实体和项目
+        const updatedEntity = {
+          ...targetEntity,
+          fields: updatedFields,
+          updatedAt: now
+        };
+        
+        const updatedProject = {
+          ...projectData,
+          schema: {
+            ...projectData.schema,
+            entities: {
+              ...projectData.schema.entities,
+              [targetEntity.entityInfo.id]: updatedEntity
+            }
+          },
+          updatedAt: now
+        };
+        
+        StorageService.saveProject(updatedProject as Project);
+        
+        if (onProjectUpdate) {
+          onProjectUpdate(updatedProject as Project);
+        }
+        
+        projectStore.notifyUpdate();
+        
+        const successMessage: ChatMessage = {
+          role: 'assistant',
+          content: `✅ 已成功更新实体 "${targetEntity.entityInfo.label}" 中的字段`,
+          badges: [{
+            type: 'success',
+            text: '字段已更新',
+            color: '#52c41a',
+            icon: 'edit'
+          }]
+        };
+        
+        setMessages(prev => [...prev, successMessage]);
+      }
+      
+    } catch (error) {
+      console.error('更新字段失败:', error);
+      
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: `❌ 更新字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        badges: [{
+          type: 'error',
+          text: '更新失败',
+          color: '#ff4d4f',
+          icon: 'exclamation-circle'
+        }]
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
+  // 从 AI 数据删除字段
+  const deleteFieldFromAI = async (entityData: unknown, project: unknown) => {
+    try {
+      console.log('🔍 开始删除字段，原始数据:', entityData);
+      
+      const now = new Date().toISOString();
+      
+      if (!entityData || typeof entityData !== 'object') {
+        throw new Error('entityData 不是有效的对象');
+      }
+      
+      const data = entityData as Record<string, unknown>;
+      
+      // 如果data包含operationType，说明这是完整的操作数据，需要提取entityData
+      let actualEntityData = data;
+      if (data.operationType && data.entityData) {
+        actualEntityData = data.entityData as Record<string, unknown>;
+        console.log('🔍 提取的实体数据:', actualEntityData);
+      }
+      const projectData = project as {
+        id: string;
+        schema: {
+          entities: Record<string, unknown>;
+        };
+      };
+      
+      if (!actualEntityData.code || typeof actualEntityData.code !== 'string') {
+        throw new Error('缺少实体代码 (code)');
+      }
+      
+      // 查找目标实体
+      const targetEntity = Object.values(projectData.schema.entities).find((entity: unknown) => {
+        const entityInfo = (entity as { entityInfo: { code: string } }).entityInfo;
+        return entityInfo.code === actualEntityData.code;
+      }) as { entityInfo: { id: string; label: string; code: string }; fields: Record<string, unknown> };
+      
+      if (!targetEntity) {
+        throw new Error(`找不到实体: ${actualEntityData.code}`);
+      }
+      
+      console.log('🔍 找到目标实体:', targetEntity.entityInfo.label);
+      
+      // 处理字段删除
+      if (actualEntityData.fields && Array.isArray(actualEntityData.fields)) {
+        const updatedFields = { ...targetEntity.fields };
+        let deletedCount = 0;
+        
+        for (const fieldData of actualEntityData.fields as Record<string, unknown>[]) {
+          if (!fieldData || typeof fieldData !== 'object') continue;
+          
+          const fieldCode = fieldData.code as string;
+          if (!fieldCode) continue;
+          
+          // 查找并删除字段
+          const fieldToDelete = Object.entries(updatedFields).find(([, field]) => {
+            const fieldInfo = (field as { columnInfo: { code: string } }).columnInfo;
+            return fieldInfo.code === fieldCode;
+          });
+          
+          if (fieldToDelete) {
+            delete updatedFields[fieldToDelete[0]];
+            deletedCount++;
+            console.log(`✅ 字段删除成功: ${fieldCode}`);
+          }
+        }
+        
+        if (deletedCount > 0) {
+          // 更新实体和项目
+          const updatedEntity = {
+            ...targetEntity,
+            fields: updatedFields,
+            updatedAt: now
+          };
+          
+          const updatedProject = {
+            ...projectData,
+            schema: {
+              ...projectData.schema,
+              entities: {
+                ...projectData.schema.entities,
+                [targetEntity.entityInfo.id]: updatedEntity
+              }
+            },
+            updatedAt: now
+          };
+          
+          StorageService.saveProject(updatedProject as Project);
+          
+          if (onProjectUpdate) {
+            onProjectUpdate(updatedProject as Project);
+          }
+          
+          projectStore.notifyUpdate();
+          
+          const successMessage: ChatMessage = {
+            role: 'assistant',
+            content: `✅ 已成功从实体 "${targetEntity.entityInfo.label}" 中删除 ${deletedCount} 个字段`,
+            badges: [{
+              type: 'success',
+              text: '字段已删除',
+              color: '#52c41a',
+              icon: 'delete'
+            }]
+          };
+          
+          setMessages(prev => [...prev, successMessage]);
+        } else {
+          throw new Error('没有找到要删除的字段');
+        }
+      }
+      
+    } catch (error) {
+      console.error('删除字段失败:', error);
+      
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: `❌ 删除字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        badges: [{
+          type: 'error',
+          text: '删除失败',
+          color: '#ff4d4f',
+          icon: 'exclamation-circle'
+        }]
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
   // 更新实体（暂时不实现）
-  const updateEntityFromAI = async (_entityData: any, _project: any) => {
+  const updateEntityFromAI = async () => {
     console.log('更新实体功能暂未实现');
   };
 
   // 删除实体（暂时不实现）
-  const deleteEntityFromAI = async (_entityData: any, _project: any) => {
+  const deleteEntityFromAI = async () => {
     console.log('删除实体功能暂未实现');
   };
 
@@ -425,9 +903,30 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
     // 生成包含上下文的 AI 提示词
     const contextPrompt = aiIntegration.generateAIPrompt(inputMessage);
     
+    // 添加上下文信息到提示词中
+    let enhancedPrompt = contextPrompt;
+    if (aiChatContexts.length > 0) {
+      const contextInfo = aiChatContexts.map(context => {
+        switch (context.type) {
+          case 'entity':
+            return `实体: ${context.entityName} (code: ${context.entityCode})`;
+          case 'field':
+            return `实体 ${context.entityName} (code: ${context.entityCode}) 的字段: ${context.fieldCode}`;
+          case 'index':
+            return `实体 ${context.entityName} (code: ${context.entityCode}) 的索引`;
+          case 'relation':
+            return `实体 ${context.entityName} (code: ${context.entityCode}) 的关系`;
+          default:
+            return context.description;
+        }
+      }).join('\n');
+      
+      enhancedPrompt = `${contextPrompt}\n\n当前上下文信息:\n${contextInfo}`;
+    }
+    
     // 构建发送给AI的消息列表（包含系统提示词和上下文）
     const aiMessages = [
-      { role: 'system' as const, content: contextPrompt },
+      { role: 'system' as const, content: enhancedPrompt },
       ...messages.filter(msg => msg.role !== 'system'),
       userMessage
     ];
@@ -643,6 +1142,11 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   };
 
 
+  // 处理移除上下文Tag
+  const handleRemoveContext = (contextId: string) => {
+    projectStore.removeAIChatContext(contextId);
+  };
+
   // Sender.Header 组件
   const senderHeader = (
     <Sender.Header
@@ -833,6 +1337,33 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
               拒绝
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* AI聊天上下文Tag组件 */}
+      {aiChatContexts.length > 0 && (
+        <div style={{ 
+          padding: '8px 16px', 
+          borderTop: '1px solid #303030',
+          backgroundColor: '#262626'
+        }}>
+          <Space wrap size={[4, 4]}>
+            {aiChatContexts.map(context => (
+              <Tag
+                key={context.id}
+                closable
+                onClose={() => handleRemoveContext(context.id)}
+                style={{
+                  // backgroundColor: context.type === 'entity' ? '#1890ff' : '#52c41a',
+                  // color: '#fff',
+                  // border: 'none',
+                  fontSize: '11px'
+                }}
+              >
+                {context.description}
+              </Tag>
+            ))}
+          </Space>
         </div>
       )}
 

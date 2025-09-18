@@ -8,9 +8,10 @@ import {
   Form
 } from 'antd';
 import { 
-  PlusOutlined, 
+  PlusOutlined
 } from '@ant-design/icons';
 import { StorageService } from '@/stores/storage';
+import { projectStore, type AIChatContext } from '@/stores/projectStore';
 import type { ADBEntity, ADBField, Project, ExtendedColumnInfo, RelationCreateConfig, Index } from '@/types/storage';
 import RelationManager from '../RelationManager';
 import ADBEnumManager from '../ADBEnumManager';
@@ -21,6 +22,7 @@ import type {
 } from '@/types/storage';
 import { RelationType } from '@/types/storage';
 import { RelationUtils } from '@/utils/relationUtils';
+import { v4 as uuidv4 } from 'uuid';
 
 // 导入新创建的组件
 import FieldList from './FieldList';
@@ -220,7 +222,9 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
 
   // 获取可用字段列表
   const availableFields = useMemo(() => {
-    return Object.values(entity.fields || {}).map(field => field.columnInfo.code);
+    return Object.values(entity.fields || {})
+      .map(field => field.columnInfo.code)
+      .filter((code): code is string => code !== undefined);
   }, [entity.fields]);
 
   useEffect(() => {
@@ -361,6 +365,18 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       console.error('删除字段失败:', error);
       message.error('删除字段失败');
     }
+  };
+
+  // 处理删除字段确认
+  const handleDeleteFieldWithConfirm = (field: ADBField) => {
+    Modal.confirm({
+      title: '确定删除此字段？',
+      content: '删除后将无法恢复，相关关系也会被清除',
+      okText: '删除',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => handleDeleteField(field)
+    });
   };
 
   // 处理编辑关系
@@ -558,6 +574,26 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
     }
   };
 
+  // 处理添加单个字段到AI Chat
+  const handleAddFieldToChat = (field: ADBField) => {
+    // 只添加选中的实体和字段组合
+    const entityCodeLast = entity.entityInfo.code.split(':').pop() || entity.entityInfo.code;
+    const entityName = entity.entityInfo.label || entityCodeLast;
+    
+    const fieldContext: AIChatContext = {
+      id: uuidv4(),
+      type: 'field',
+      entityCode: entity.entityInfo.code,
+      entityName: entity.entityInfo.label || entity.entityInfo.code,
+      fieldCode: field.columnInfo.code,
+      fieldName: field.columnInfo.label,
+      description: `${entityName}(${entityCodeLast})的${field.columnInfo.code}`
+    };
+    projectStore.addAIChatContext(fieldContext);
+
+    message.success(`已添加字段 "${field.columnInfo.code}" 到AI聊天上下文`);
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 字段管理头部 */}
@@ -624,7 +660,8 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
           <FieldList 
             fields={fields}
             onEdit={handleEditField}
-            onDelete={handleDeleteField}
+            onDelete={handleDeleteFieldWithConfirm}
+            onAddToChat={handleAddFieldToChat}
           />
         )}
         

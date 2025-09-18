@@ -67,6 +67,9 @@ const CustomCodeBlock: React.FC<any> = (props) => {
         message.error('复制失败');
       }
     };
+
+    // 对于 ADB 代码块，使用 JSON 格式显示
+    const displayLanguage = isADBCodeBlock ? 'json' : language;
     
     return (
       <div style={{ margin: '16px 0' }}>
@@ -88,7 +91,7 @@ const CustomCodeBlock: React.FC<any> = (props) => {
             fontWeight: '500',
             color: '#fff'
           }}>
-            {isADBCodeBlock ? 'ADB TypeORM' : language}
+            {isADBCodeBlock ? 'ADB JSON' : language}
           </span>
           <Button
             type="text"
@@ -111,7 +114,7 @@ const CustomCodeBlock: React.FC<any> = (props) => {
           {...rest}
           PreTag="div"
           children={codeContent}
-          language={language}
+          language={displayLanguage}
           style={vscDarkPlus}
           customStyle={{
             margin: 0,

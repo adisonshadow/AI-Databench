@@ -14,7 +14,6 @@ import {
   message,
   Table,
   Badge,
-  Tooltip,
   Dropdown,
   Flex
 } from 'antd';
@@ -30,17 +29,18 @@ import {
   MoreOutlined,
   CaretDownOutlined,
   CaretRightOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageService } from '@/stores/storage';
+import { projectStore, type AIChatContext } from '@/stores/projectStore';
 import FieldsManager from '@/components/FieldsManager';
 import ADBEnumManager from '@/components/ADBEnumManager';
 import AIAddNewEntities from '@/components/AIAssistant/AIAddNewEntitis';
 import type { Project, ADBEntity } from '@/types/storage';
 import type { ColumnsType } from 'antd/es/table';
 import type { Key } from 'antd/es/table/interface';
-import Lottie from '@/components/Lottie';
 
 
 const { Text } = Typography;
@@ -77,7 +77,9 @@ const ModelDesigner: React.FC = () => {
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEnumModalVisible, setIsEnumModalVisible] = useState(false);
   const [isAICreateModalVisible, setIsAICreateModalVisible] = useState(false);
+  const [editingEntity, setEditingEntity] = useState<SchemaTreeItem | null>(null);
   const [createForm] = Form.useForm();
+  // const projectStore = useProjectStore();
 
   // 处理项目更新
   const handleProjectUpdate = (updatedProject: Project) => {
@@ -203,13 +205,24 @@ const ModelDesigner: React.FC = () => {
   const handleEntityEdit = (entity: SchemaTreeItem) => {
     if (!entity.id) return;
     
-    createForm.setFieldsValue({
+    console.log('编辑实体数据:', entity);
+    
+    setEditingEntity(entity);
+    const formValues = {
       code: entity.code,
       label: entity.name,
       description: entity.description,
       status: entity.status
-    });
+    };
+    
+    console.log('设置表单值:', formValues);
+    createForm.setFieldsValue(formValues);
     setIsCreateModalVisible(true);
+    
+    // 确保表单数据正确显示
+    setTimeout(() => {
+      createForm.setFieldsValue(formValues);
+    }, 100);
   };
 
   // 处理实体删除
@@ -303,6 +316,18 @@ const ModelDesigner: React.FC = () => {
         
         const dropdownItems = [
           {
+            key: 'lock',
+            label: record.isLocked ? '解锁' : '锁定',
+            icon: record.isLocked ? <UnlockOutlined /> : <LockOutlined />,
+            onClick: () => handleEntityLockToggle(record)
+          },
+          {
+            key: 'addToChat',
+            label: '添加实体到AI Chat',
+            icon: <MessageOutlined />,
+            onClick: () => handleAddEntityToChat(record)
+          },
+          {
             key: 'edit',
             label: '编辑',
             icon: <EditOutlined />,
@@ -330,16 +355,6 @@ const ModelDesigner: React.FC = () => {
         
         return (
           <Flex justify='end'>
-            <Tooltip title={record.isLocked ? "解锁实体" : "锁定实体"}>
-              <Button
-                type="link"
-                icon={record.isLocked ? <LockOutlined /> : <UnlockOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEntityLockToggle(record);
-                }}
-              />
-            </Tooltip>
             <Dropdown
               menu={{
                 items: dropdownItems.map(item => ({
@@ -397,62 +412,117 @@ const ModelDesigner: React.FC = () => {
 
   // 处理手工新建实体
   const handleManualCreateEntity = () => {
+    setEditingEntity(null);
     createForm.resetFields();
     setIsCreateModalVisible(true);
   };
 
-  // 处理保存新建实体
+  // 处理保存实体（新建或编辑）
   const handleSaveEntity = async (values: EntityFormValues) => {
     if (!project) return;
 
     try {
       const now = new Date().toISOString();
-      const entityId = uuidv4(); // 使用uuid生成唯一ID
+      const isEditing = editingEntity !== null;
       
-      // 从 code中提取tableName（最后一级）
-      const codeParts = values.code.split(':');
-      const tableName = codeParts[codeParts.length - 1];
-      
-      const newEntity: ADBEntity = {
-        entityInfo: {
-          id: entityId,
-          code: values.code,
-          label: values.label,
-          tableName: tableName,
-          comment: values.description, // description作为comment
-          status: values.status || 'enabled',
-          description: values.description,
-          tags: values.tags || [],
-          isLocked: false
-        },
-        fields: {},
-        createdAt: now,
-        updatedAt: now
-      };
-
-      // 更新项目
-      const updatedProject = {
-        ...project,
-        schema: {
-          ...project.schema,
-          entities: {
-            ...project.schema.entities,
-            [entityId]: newEntity
-          }
+      if (isEditing && editingEntity.id) {
+        // 编辑现有实体
+        const existingEntity = project.schema.entities[editingEntity.id];
+        if (!existingEntity) {
+          message.error('实体不存在');
+          return;
         }
-      };
 
-      // 保存到localStorage
-      StorageService.saveProject(updatedProject);
-      handleProjectUpdate(updatedProject);
+        // 从 code中提取tableName（最后一级）
+        const codeParts = values.code.split(':');
+        const tableName = codeParts[codeParts.length - 1];
 
-      setIsCreateModalVisible(false);
-      createForm.resetFields();
-      
-      message.success('实体创建成功');
+        const updatedEntity: ADBEntity = {
+          ...existingEntity,
+          entityInfo: {
+            ...existingEntity.entityInfo,
+            code: values.code,
+            label: values.label,
+            tableName: tableName,
+            comment: values.description,
+            status: values.status || 'enabled',
+            description: values.description,
+            tags: values.tags || []
+          },
+          updatedAt: now
+        };
+
+        // 更新项目
+        const updatedProject = {
+          ...project,
+          schema: {
+            ...project.schema,
+            entities: {
+              ...project.schema.entities,
+              [editingEntity.id]: updatedEntity
+            }
+          }
+        };
+
+        // 保存到localStorage
+        StorageService.saveProject(updatedProject);
+        handleProjectUpdate(updatedProject);
+
+        setIsCreateModalVisible(false);
+        setEditingEntity(null);
+        createForm.resetFields();
+        
+        message.success('实体更新成功');
+      } else {
+        // 新建实体
+        const entityId = uuidv4(); // 使用uuid生成唯一ID
+        
+        // 从 code中提取tableName（最后一级）
+        const codeParts = values.code.split(':');
+        const tableName = codeParts[codeParts.length - 1];
+        
+        const newEntity: ADBEntity = {
+          entityInfo: {
+            id: entityId,
+            code: values.code,
+            label: values.label,
+            tableName: tableName,
+            comment: values.description, // description作为comment
+            status: values.status || 'enabled',
+            description: values.description,
+            tags: values.tags || [],
+            isLocked: false
+          },
+          fields: {},
+          createdAt: now,
+          updatedAt: now
+        };
+
+        // 更新项目
+        const updatedProject = {
+          ...project,
+          schema: {
+            ...project.schema,
+            entities: {
+              ...project.schema.entities,
+              [entityId]: newEntity
+            }
+          }
+        };
+
+        // 保存到localStorage
+        StorageService.saveProject(updatedProject);
+        handleProjectUpdate(updatedProject);
+
+        setIsCreateModalVisible(false);
+        setEditingEntity(null);
+        createForm.resetFields();
+        
+        message.success('实体创建成功');
+      }
     } catch (error) {
-      console.error('创建实体失败:', error);
-      message.error('创建实体失败');
+      console.error('保存实体失败:', error);
+      message.error('保存实体失败');
     }
   };
 
@@ -465,6 +535,29 @@ const ModelDesigner: React.FC = () => {
   // 处理ADB枚举管理
   const handleEnumManage = () => {
     setIsEnumModalVisible(true);
+  };
+
+  // 处理添加实体到AI Chat
+  const handleAddEntityToChat = (entity: SchemaTreeItem) => {
+    if (!entity.id || !project) return;
+    
+    const fullEntity = project.schema.entities[entity.id];
+    if (!fullEntity) return;
+
+    // 只创建实体上下文，不添加字段
+    const entityCodeLast = entity.code.split(':').pop() || entity.code;
+    const entityContext: AIChatContext = {
+      id: uuidv4(),
+      type: 'entity',
+      entityCode: entity.code,
+      entityName: entity.name || entity.code,
+      description: `${entity.name || entityCodeLast}(${entityCodeLast})`
+    };
+
+    // 添加到AI聊天上下文
+    projectStore.addAIChatContext(entityContext);
+
+    message.success(`已添加实体 "${entity.name}" 到AI聊天上下文`);
   };
 
   useEffect(() => {
@@ -485,6 +578,7 @@ const ModelDesigner: React.FC = () => {
         
         // 设置为活跃项目
         StorageService.setActiveProject(projectId);
+        projectStore.setCurrentProjectId(projectId);
         
         // 添加到最近访问列表
         StorageService.addRecentProject(projectId);
@@ -499,6 +593,23 @@ const ModelDesigner: React.FC = () => {
 
     loadProject();
   }, [projectId, navigate]);
+
+  // 监听项目存储更新 - 使用projectStore的订阅机制
+  useEffect(() => {
+    const unsubscribe = projectStore.subscribe(() => {
+      const currentProjectId = projectStore.getCurrentProjectId();
+      if (currentProjectId === projectId) {
+        // 重新加载项目数据
+        const updatedProject = StorageService.getProject(projectId);
+        if (updatedProject) {
+          setProject(updatedProject);
+          generateEntityTreeData(updatedProject);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [projectId]);
 
   if (loading) {
     return (
@@ -580,6 +691,7 @@ const ModelDesigner: React.FC = () => {
                   rowKey={(record) => record.code}
                   pagination={false}
                   size="small"
+                  showHeader={false}
                   expandable={{
                     expandedRowKeys,
                     onExpandedRowsChange: (expandedKeys: readonly Key[]) => {
@@ -689,12 +801,13 @@ const ModelDesigner: React.FC = () => {
         </Splitter.Panel>
       </Splitter>
       
-      {/* 创建实体模态框 */}
+      {/* 创建/编辑实体模态框 */}
       <Modal
-        title="手工新建实体"
+        title={editingEntity ? "编辑实体" : "手工新建实体"}
         open={isCreateModalVisible}
         onCancel={() => {
           setIsCreateModalVisible(false);
+          setEditingEntity(null);
           createForm.resetFields();
         }}
         onOk={() => createForm.submit()}
@@ -706,7 +819,7 @@ const ModelDesigner: React.FC = () => {
           form={createForm}
           onFinish={handleSaveEntity}
           layout="vertical"
-          preserve={false}
+          preserve={true}
           style={{ paddingTop: 30 }}
         >
           <Form.Item
