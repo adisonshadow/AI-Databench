@@ -18,8 +18,8 @@ import {
   Flex
 } from 'antd';
 import { 
-  // PlusOutlined, 
-  // RobotOutlined, 
+  PlusOutlined, 
+  SubnodeOutlined, 
   PartitionOutlined,
   BuildOutlined,
   EditOutlined,
@@ -83,6 +83,8 @@ const ModelDesigner: React.FC = () => {
 
   // 处理项目更新
   const handleProjectUpdate = (updatedProject: Project) => {
+    console.log('🔍 handleProjectUpdate 被调用');
+    console.log('🔍 更新后的项目实体数量:', Object.keys(updatedProject.schema.entities).length);
     setProject(updatedProject);
     generateEntityTreeData(updatedProject);
   };
@@ -227,11 +229,22 @@ const ModelDesigner: React.FC = () => {
 
   // 处理实体删除
   const handleEntityDelete = async (entity: SchemaTreeItem) => {
-    if (!entity.id || !project) return;
+    console.log('🔍 开始删除实体:', entity);
+    console.log('🔍 实体ID:', entity.id);
+    console.log('🔍 项目:', project);
+    
+    if (!entity.id || !project) {
+      console.log('❌ 缺少必要参数');
+      return;
+    }
     
     try {
+      console.log('🔍 删除前的实体列表:', Object.keys(project.schema.entities));
+      
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [entity.id]: _, ...remainingEntities } = project.schema.entities;
+      
+      console.log('🔍 删除后的实体列表:', Object.keys(remainingEntities));
       
       const updatedProject = {
         ...project,
@@ -241,17 +254,25 @@ const ModelDesigner: React.FC = () => {
         }
       };
 
+      console.log('🔍 保存项目到localStorage');
       StorageService.saveProject(updatedProject);
+      
+      console.log('🔍 通知项目更新');
       handleProjectUpdate(updatedProject);
+      
+      console.log('🔍 通知projectStore更新');
+      projectStore.notifyUpdate();
       
       // 如果删除的是当前选中的实体，清除选中状态
       if (selectedEntity?.entityInfo.id === entity.id) {
+        console.log('🔍 清除选中状态');
         setSelectedEntity(null);
       }
       
+      console.log('✅ 实体删除成功');
       message.success('实体删除成功');
     } catch (error) {
-      console.error('删除实体失败:', error);
+      console.error('❌ 删除实体失败:', error);
       message.error('删除实体失败');
     }
   };
@@ -261,6 +282,7 @@ const ModelDesigner: React.FC = () => {
     {
       title: 'Code',
       dataIndex: 'code',
+      width: '45%',
       key: 'code',
       render: (text: string, record: SchemaTreeItem) => {
         // 获取当前层级的名称（最后一个冒号后的部分）
@@ -309,7 +331,7 @@ const ModelDesigner: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 120,
+      width: 40,
       render: (_: unknown, record: SchemaTreeItem) => {
         // 只有叶子节点显示操作按钮
         if (record.children?.length) return null;
@@ -367,7 +389,7 @@ const ModelDesigner: React.FC = () => {
               trigger={['click']}
             >
               <Button
-                type="link"
+                type="text"
                 icon={<MoreOutlined />}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -379,9 +401,9 @@ const ModelDesigner: React.FC = () => {
   ];
 
   // 处理AI新建实体
-  const handleAICreateEntity = () => {
-    setIsAICreateModalVisible(true);
-  };
+  // const handleAICreateEntity = () => {
+  //   setIsAICreateModalVisible(true);
+  // };
 
   // 处理AI创建的实体
   const handleAIEntityCreated = (entity: ADBEntity) => {
@@ -633,13 +655,13 @@ const ModelDesigner: React.FC = () => {
             {/* 实体管理头部 */}
             <Space style={{ 
               height: 40,
-              backgroundColor: '#1f1f1f',
-              padding: '0 20px',
+              // backgroundColor: '#1f1f1f',
+              padding: '0 5px',
             }}>
               {/* <Title level={5} style={{ margin: 0, marginBottom: 12, color: '#ffffff' }}>
                 实体管理
               </Title> */}
-                <Space.Compact block>
+                {/* <Space.Compact block>
                     <Button 
                     //   type="primary" 
                     // icon={<RobotOutlined />}
@@ -647,7 +669,7 @@ const ModelDesigner: React.FC = () => {
                     onClick={handleAICreateEntity}
                     size="small"
                     >
-                      {/* <Lottie filename="AI-assistant" style={{ width: 32, height: 32 }} /> */}
+                      <Lottie filename="AI-assistant" style={{ width: 32, height: 32 }} />
                     AI新建
                     </Button>
                     <Button 
@@ -658,7 +680,18 @@ const ModelDesigner: React.FC = () => {
                     >
                     新建
                     </Button>
-                </Space.Compact>
+                </Space.Compact> */}
+
+                <Button 
+                  icon={<SubnodeOutlined />}
+                  type="text"
+                  onClick={handleManualCreateEntity}
+                  size="small"
+                  style={{ marginRight: 10 }}
+                >
+                  实体
+                </Button>
+
                 <Button 
                   icon={<PartitionOutlined />}
                   type="text"
@@ -681,7 +714,7 @@ const ModelDesigner: React.FC = () => {
             <div style={{ 
               flex: 1, 
               overflow: 'auto', 
-              padding: '16px',
+              padding: '4px',
               backgroundColor: '#141414'
             }}>
               {entityTreeData.length > 0 ? (
@@ -772,21 +805,22 @@ const ModelDesigner: React.FC = () => {
         {/* 右侧：字段管理 */}
         <Splitter.Panel>
           {selectedEntity ? (
-            <FieldsManager entity={selectedEntity} project={project!} onEntityUpdate={handleProjectUpdate} />
+            <FieldsManager entity={selectedEntity} project={project!} onEntityUpdate={handleProjectUpdate} onProjectUpdate={handleProjectUpdate} />
           ) : (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               {/* 字段管理头部（无选中实体时显示） */}
-              <Space style={{ 
+              {/* <Space style={{ 
                 height: 40,
                 padding: '0 20px',
                 backgroundColor: '#1f1f1f'
               }}>
                 <Text type="secondary">请选择一个实体查看字段信息</Text>
-              </Space>
+              </Space> */}
               
               {/* 字段列表内容区域 */}
               <div style={{ 
                 flex: 1, 
+                flexDirection: 'column',
                 overflow: 'auto', 
                 padding: '16px',
                 backgroundColor: '#141414',
@@ -794,7 +828,8 @@ const ModelDesigner: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Empty description="请选择一个实体查看字段信息" />
+                <img src="/toleft.svg" style={{ height: 68, marginBottom: 40 }} />
+                <Text type="secondary">请选择一个实体查看字段信息</Text>
               </div>
             </div>
           )}

@@ -190,18 +190,22 @@ const Projects: React.FC = () => {
   return (
     <div>
       {/* 页面头部 */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 2, padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <Title level={2} style={{ margin: 0 }}>
-              项目管理
-            </Title>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+              <img src="/logo.svg" alt="AIDatabench" style={{ height: '32px', marginRight: 20 }} />
+              <Title level={2} style={{ margin: 0 }}>
+                项目管理
+              </Title>
+            </div>
             <Text type="secondary">
               管理您的AIDatabench项目，点击项目卡片进入ORM设计器
             </Text>
           </div>
           <Button 
             type="primary" 
+            ghost
             icon={<PlusOutlined />}
             onClick={handleCreate}
             size="large"
@@ -222,79 +226,82 @@ const Projects: React.FC = () => {
           </Button>
         </Empty>
       ) : (
-        <Row gutter={[16, 16]}>
-          {projects.map((project) => {
-            const stats = getProjectStats(project);
-            return (
-              <Col xs={24} sm={12} lg={8} xl={6} key={project.id}>
-                <Card
-                  hoverable
-                  actions={[
-                    <Button 
-                      type="text" 
-                      icon={<FolderOpenOutlined />}
-                      onClick={() => handleOpenProject(project)}
-                    >
-                      打开
-                    </Button>,
-                    <Button 
-                      type="text" 
-                      icon={<EditOutlined />}
-                      onClick={() => handleEdit(project)}
-                    >
-                      编辑
-                    </Button>,
-                    <Popconfirm
-                      title="确定删除这个项目吗？"
-                      description="此操作不可恢复，请谨慎操作。"
-                      onConfirm={() => handleDelete(project)}
-                      okText="删除"
-                      cancelText="取消"
-                      okButtonProps={{ danger: true }}
-                    >
+        <div style={{ padding: 24 }}>
+          <Row gutter={[16, 16]}>
+            {projects.map((project) => {
+              const stats = getProjectStats(project);
+              return (
+                <Col xs={24} sm={12} lg={8} xl={6} key={project.id}>
+                  <Card
+                    hoverable
+                    style={{ backgroundColor: '#1f1f00' }}
+                    actions={[
                       <Button 
                         type="text" 
-                        icon={<DeleteOutlined />}
-                        danger
+                        icon={<FolderOpenOutlined />}
+                        onClick={() => handleOpenProject(project)}
                       >
-                        删除
-                      </Button>
-                    </Popconfirm>
-                  ]}
-                >
-                  <Meta
-                    title={
-                      <div style={{ cursor: 'pointer' }} onClick={() => handleOpenProject(project)}>
-                        {project.name}
-                      </div>
-                    }
-                    description={
-                      <div>
-                        <div style={{ marginBottom: 8 }}>
-                          <Text ellipsis={{ tooltip: project.description }}>
-                            {project.description || '暂无描述'}
-                          </Text>
+                        打开
+                      </Button>,
+                      <Button 
+                        type="text" 
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(project)}
+                      >
+                        编辑
+                      </Button>,
+                      <Popconfirm
+                        title="确定删除这个项目吗？"
+                        description="此操作不可恢复，请谨慎操作。"
+                        onConfirm={() => handleDelete(project)}
+                        okText="删除"
+                        cancelText="取消"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <Button 
+                          type="text" 
+                          icon={<DeleteOutlined />}
+                          // danger
+                        >
+                          删除
+                        </Button>
+                      </Popconfirm>
+                    ]}
+                  >
+                    <Meta
+                      title={
+                        <div style={{ cursor: 'pointer' }} onClick={() => handleOpenProject(project)}>
+                          {project.name}
                         </div>
-                        <div style={{ marginBottom: 8 }}>
-                          <Space>
-                            <Tag color="blue">{stats.entityCount} 个实体</Tag>
-                            <Tag color="green">{stats.relationCount} 个关系</Tag>
-                          </Space>
+                      }
+                      description={
+                        <div>
+                          <div style={{ marginBottom: 8 }}>
+                            <Text ellipsis={{ tooltip: project.description }}>
+                              {project.description || '暂无描述'}
+                            </Text>
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <Space>
+                              <Tag color="blue">{stats.entityCount} 个实体</Tag>
+                              <Tag color="green">{stats.relationCount} 个关系</Tag>
+                            </Space>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', color: '#999' }}>
+                            <CalendarOutlined style={{ marginRight: 4 }} />
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              更新于 {formatDate(project.updatedAt)}
+                            </Text>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', color: '#999' }}>
-                          <CalendarOutlined style={{ marginRight: 4 }} />
-                          <Text type="secondary" style={{ fontSize: '12px' }}>
-                            更新于 {formatDate(project.updatedAt)}
-                          </Text>
-                        </div>
-                      </div>
-                    }
-                  />
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
+                      }
+                    />
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        </div>
       )}
 
       {/* 创建/编辑项目模态框 */}
@@ -310,7 +317,8 @@ const Projects: React.FC = () => {
         maskClosable={false}
         destroyOnHidden
         width={600}
-        style={{ paddingTop: 30 }}
+        centered
+        // style={{ paddingTop: 30 }}
       >
         <Form
           form={form}

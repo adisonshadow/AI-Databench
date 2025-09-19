@@ -38,6 +38,7 @@ interface FieldsManagerProps {
   entity: ADBEntity;
   project: Project;
   onEntityUpdate: (project: Project) => void;
+  onProjectUpdate?: (project: Project) => void;
 }
 
 interface FieldFormValues {
@@ -95,7 +96,7 @@ interface FieldFormValues {
   };
 }
 
-const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntityUpdate }) => {
+const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntityUpdate, onProjectUpdate }) => {
   const [fields, setFields] = useState<ADBField[]>([]);
   const [activeTab, setActiveTab] = useState<'fields' | 'indexes' | 'relations'>('fields');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -330,10 +331,19 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
 
   // 处理删除字段
   const handleDeleteField = async (field: ADBField) => {
+    console.log('🔍 开始删除字段:', field);
+    console.log('🔍 字段ID:', field.columnInfo.id);
+    console.log('🔍 实体:', entity);
+    console.log('🔍 项目:', project);
+    
     try {
       const now = new Date().toISOString();
+      console.log('🔍 删除前的字段列表:', Object.keys(entity.fields));
+      
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [field.columnInfo.id]: _, ...remainingFields } = entity.fields;
+      
+      console.log('🔍 删除后的字段列表:', Object.keys(remainingFields));
       
       const updatedEntity = {
         ...entity,
@@ -352,31 +362,105 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         }
       };
 
+      console.log('🔍 保存项目到localStorage');
       StorageService.saveProject(updatedProject);
       
+      console.log('🔍 更新本地字段状态');
       // 立即更新本地状态
       setFields(Object.values(updatedEntity.fields || {}));
       
+      console.log('🔍 通知父组件更新');
       // 通知父组件更新
       onEntityUpdate(updatedProject);
       
+      console.log('🔍 通知projectStore更新');
+      // 通知projectStore更新
+      projectStore.notifyUpdate();
+      
+      console.log('✅ 字段删除成功');
       message.success('字段删除成功');
     } catch (error) {
-      console.error('删除字段失败:', error);
+      console.error('❌ 删除字段失败:', error);
       message.error('删除字段失败');
     }
   };
 
   // 处理删除字段确认
   const handleDeleteFieldWithConfirm = (field: ADBField) => {
+    console.log('🔍 显示删除确认对话框:', field);
     Modal.confirm({
       title: '确定删除此字段？',
       content: '删除后将无法恢复，相关关系也会被清除',
       okText: '删除',
       cancelText: '取消',
       okType: 'danger',
-      onOk: () => handleDeleteField(field)
+      onOk: () => {
+        console.log('🔍 用户确认删除字段');
+        handleDeleteField(field);
+      },
+      onCancel: () => {
+        console.log('🔍 用户取消删除字段');
+      }
     });
+  };
+
+  // 处理字段排序变化
+  const handleFieldSortChange = (sortedFields: ADBField[]) => {
+    if (!project || !entity.entityInfo.id) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      // 更新字段的orderIndex
+      const updatedFields: Record<string, ADBField> = {};
+      sortedFields.forEach((field, index) => {
+        updatedFields[field.columnInfo.id] = {
+          ...field,
+          columnInfo: {
+            ...field.columnInfo,
+            orderIndex: index
+          },
+          updatedAt: now
+        };
+      });
+      
+      // 更新实体
+      const updatedEntity = {
+        ...entity,
+        fields: updatedFields,
+        updatedAt: now
+      };
+      
+      // 更新项目
+      const updatedProject = {
+        ...project,
+        schema: {
+          ...project.schema,
+          entities: {
+            ...project.schema.entities,
+            [entity.entityInfo.id]: updatedEntity
+          }
+        },
+        updatedAt: now
+      };
+      
+      // 保存到localStorage
+      StorageService.saveProject(updatedProject);
+      
+      // 通知父组件项目已更新
+      if (onProjectUpdate) {
+        onProjectUpdate(updatedProject);
+      }
+      
+      // 通知全局项目存储项目已更新
+      projectStore.notifyUpdate();
+      
+      message.success('字段排序已更新');
+      
+    } catch (error) {
+      console.error('更新字段排序失败:', error);
+      message.error('更新字段排序失败');
+    }
   };
 
   // 处理编辑关系
@@ -599,7 +683,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       {/* 字段管理头部 */}
       <Space style={{ 
         height: 40,
-        padding: '0 20px',
+        padding: '0 5px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
@@ -612,6 +696,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
               { label: '索引', value: 'indexes' },
               { label: '关系', value: 'relations' }
             ]}
+            size="small"
             value={activeTab}
             onChange={(value) => setActiveTab(value as 'fields' | 'indexes' | 'relations')}
           />
@@ -620,29 +705,32 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
           {/* 根据当前活动的tab显示不同的按钮 */}
           {activeTab === 'fields' && (
             <Button 
-              type="primary" 
+              type="text" 
               icon={<PlusOutlined />}
               onClick={handleCreateField}
+              size="small"
             >
-              新建字段
+              字段
             </Button>
           )}
           {activeTab === 'relations' && (
             <Button 
-              type="primary" 
+              type="text" 
               icon={<PlusOutlined />}
               onClick={handleCreateRelation}
+              size="small"
             >
-              新建关系
+              关系
             </Button>
           )}
           {activeTab === 'indexes' && (
             <Button 
-              type="primary" 
+              type="text" 
               icon={<PlusOutlined />}
               onClick={handleCreateIndex}
+              size="small"
             >
-              新建索引
+              索引
             </Button>
           )}
         </Space>
@@ -652,8 +740,8 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       <div style={{ 
         flex: 1, 
         overflow: 'auto', 
-        padding: '16px',
-        backgroundColor: '#141414'
+        padding: '5px',
+        // backgroundColor: '#141414'
       }}>
         {/* 根据当前活动的tab显示不同的内容 */}
         {activeTab === 'fields' && (
@@ -662,6 +750,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
             onEdit={handleEditField}
             onDelete={handleDeleteFieldWithConfirm}
             onAddToChat={handleAddFieldToChat}
+            onSortChange={handleFieldSortChange}
           />
         )}
         

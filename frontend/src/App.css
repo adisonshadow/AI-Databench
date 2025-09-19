@@ -44,7 +44,7 @@ body {
 /* Ant Design 卡片深色主题优化 */
 .ant-card {
   margin-bottom: 16px;
-  background-color: #1f1f1f !important;
+  background-color: #1a1a1a !important;
   border-color: #303030 !important;
 }
 
@@ -53,8 +53,12 @@ body {
   border-bottom-color: #303030 !important;
 }
 
-.ant-card-body {
-  background-color: #1f1f1f !important;
+.ant-card-body:hover{
+  background-image: linear-gradient(54deg, transparent 55%, #342f2f);
+}
+
+.ant-card .ant-card-actions>li{
+  margin: 4px 0 !important;
 }
 
 /* 统计卡片样式 */
@@ -72,6 +76,9 @@ body {
 }
 
 /* 模态框样式优化 */
+.ant-modal-body>.ant-form{
+  margin: 30px 20px 10px 20px !important;
+}
 
 .ant-modal-title {
   color: #ffffff !important;
@@ -250,4 +257,8 @@ body {
 
 .ai-select {
   min-width: 120px !important;
+}
+
+.ant-table-tbody >tr:last-child >td{
+  border-bottom: none !important;
 }

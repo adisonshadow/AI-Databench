@@ -1,36 +1,51 @@
-import React from 'react';
-import { Table, Tag, Space, Button, Popconfirm, Empty, Typography, Dropdown, Flex } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Tag, Space, Button, Empty, Dropdown, Flex } from 'antd';
 import { 
   EditOutlined, 
   DeleteOutlined,
   KeyOutlined,
   CheckCircleOutlined,
   MoreOutlined,
-  MessageOutlined
+  MessageOutlined,
+  ToolOutlined 
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+// import type { ColumnsType } from 'antd/es/table';
 import type { ADBField } from '@/types/storage';
 
-const { Text } = Typography;
+import type { ProColumns } from '@ant-design/pro-components';
+import { DragSortTable } from '@ant-design/pro-components';
+
+// const { Text } = Typography;
 
 interface FieldListProps {
   fields: ADBField[];
   onEdit: (field: ADBField) => void;
   onDelete: (field: ADBField) => void;
   onAddToChat: (field: ADBField) => void;
+  onSortChange?: (fields: ADBField[]) => void;
 }
 
-const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddToChat }) => {
+const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddToChat, onSortChange }) => {
+  
+  const [fieldsData, setFieldsData] = useState<ADBField[]>([]);
+
   // 表格列定义
-  const columns: ColumnsType<ADBField> = [
+  const columns: ProColumns<ADBField>[] = [
+    {
+      title: '排序',
+      dataIndex: 'sort',
+      width: 60,
+      className: 'drag-visible',
+      // render: () => <span style={{ cursor: 'move' }}>⋮⋮</span>,
+    },
     {
       title: '字段标识',
       dataIndex: ['columnInfo', 'code'],
       key: 'code',
       width: 120,
-      render: (code: string, record: ADBField) => (
+      render: (_, record: ADBField) => (
         <div>
-          <code style={{ color: '#1890ff' }}>{code}</code>
+          <code style={{ color: '#1890ff' }}>{record.columnInfo.code}</code>
           {record.typeormConfig.primary && (
             <KeyOutlined style={{ color: '#f39c12', marginLeft: 4 }} title="主键" />
           )}
@@ -146,7 +161,11 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
     //   )
     // },
     {
-      title: '操作',
+      title: ()=>{
+        return (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}><ToolOutlined /></div>
+        );
+      },
       key: 'actions',
       width: 40,
       fixed: 'right',
@@ -170,6 +189,7 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
+              console.log('🔍 FieldList: 点击删除按钮:', record);
               // 这里需要处理删除确认，但由于Dropdown的限制，我们需要用其他方式
               onDelete(record);
             }
@@ -190,7 +210,7 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
               trigger={['click']}
             >
               <Button
-                type="link"
+                type="text"
                 icon={<MoreOutlined />}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -201,16 +221,52 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
     }
   ];
 
+  useEffect(() => {
+    // 为字段添加sort属性，用于拖拽排序
+    const fieldsWithSort = fields.map((field, index) => ({
+      ...field,
+      sort: index
+    }));
+    setFieldsData(fieldsWithSort);
+    console.log('fieldsWithSort', fieldsWithSort);
+  }, [fields]);
+
+  const handleDragSortEnd = (
+    _beforeIndex: number,
+    _afterIndex: number,
+    newDataSource: ADBField[],
+  ) => {
+    console.log('排序后的数据', newDataSource);
+    
+    // 移除sort属性，恢复原始字段数据
+    const fieldsWithoutSort = newDataSource.map((field) => {
+      const { sort, ...fieldWithoutSort } = field as ADBField & { sort?: number };
+      return fieldWithoutSort as ADBField;
+    });
+    
+    setFieldsData(newDataSource);
+    
+    // 通知父组件字段顺序已改变
+    if (onSortChange) {
+      onSortChange(fieldsWithoutSort);
+    }
+  };
+
   return (
     <>
-      {fields.length > 0 ? (
-        <Table
+      {fieldsData.length > 0 ? (
+        <DragSortTable
           columns={columns}
-          dataSource={fields}
-          rowKey={(record) => record.columnInfo.id}
+          dataSource={fieldsData}
+          search={false}
+          rowKey="sort"  //{(record) => record.columnInfo.id}
           size="small"
-          scroll={{ x: 800 }}
+          // scroll={{ x: 800 }}
           pagination={false}
+          dragSortKey="sort"
+          onDragSortEnd={handleDragSortEnd}
+          toolBarRender={false}
+          optionsRender={() => []}
         />
       ) : (
         <Empty 

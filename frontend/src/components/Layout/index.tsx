@@ -82,6 +82,7 @@ const LayoutContent: React.FC = () => {
           <div style={{ 
             background: '#1f1f1f', 
             minHeight: 'calc(100vh - 48px)',
+            height: '100%',
             borderRadius: '8px',
             padding: '0px',
             width: '100%'
@@ -180,8 +181,8 @@ const LayoutContent: React.FC = () => {
         <Splitter style={{ height: 'calc(100vh - 50px)' }}>
           <Splitter.Panel>
             <div style={{ 
-              background: '#1f1f1f', 
-              minHeight: 'calc(100vh - 50px)',
+              // background: '#1f1f1f', 
+              // minHeight: 'calc(100vh - 50px)',
               overflow: 'auto',
               // borderRadius: '8px',
               height: '100%'
