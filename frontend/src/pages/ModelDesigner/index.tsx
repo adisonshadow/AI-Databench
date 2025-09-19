@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Spin, 
@@ -16,7 +16,8 @@ import {
   Badge,
   Dropdown,
   Flex,
-  Popconfirm
+  Popconfirm,
+  Tabs
 } from 'antd';
 import { 
   SubnodeOutlined, 
@@ -80,6 +81,8 @@ const ModelDesigner: React.FC = () => {
   const [isAICreateModalVisible, setIsAICreateModalVisible] = useState(false);
   const [editingEntity, setEditingEntity] = useState<SchemaTreeItem | null>(null);
   const [createForm] = Form.useForm();
+  const [aiForm] = Form.useForm();
+  const [activeTab, setActiveTab] = useState<string>('ai');
   // const projectStore = useProjectStore();
   
   // 行状态管理
@@ -118,7 +121,7 @@ const ModelDesigner: React.FC = () => {
   };
 
   // 生成实体树形数据（参考旧项目buildSchemaTree）
-  const generateEntityTreeData = (project: Project) => {
+  const generateEntityTreeData = useCallback((project: Project) => {
     // console.log('🔍 ========== 生成实体树形数据 ==========');
     // console.log('🔍 输入项目:', project);
     // console.log('🔍 项目实体:', project.schema.entities);
@@ -200,7 +203,7 @@ const ModelDesigner: React.FC = () => {
     
     // console.log('🔍 设置实体树形数据完成');
     // console.log('🔍 ========== 生成实体树形数据完成 ==========');
-  };
+  }, [rowStatusMap]);
 
   // 处理实体选择
   const handleEntitySelect = (entity: SchemaTreeItem) => {
@@ -254,6 +257,7 @@ const ModelDesigner: React.FC = () => {
     // console.log('编辑实体数据:', entity);
     
     setEditingEntity(entity);
+    setActiveTab('manual'); // 编辑时默认显示手工Tab
     const formValues = {
       code: entity.code,
       label: entity.name,
@@ -533,8 +537,59 @@ const ModelDesigner: React.FC = () => {
   // 处理手工新建实体
   const handleManualCreateEntity = () => {
     setEditingEntity(null);
+    setActiveTab('ai'); // 新建时默认显示AI Tab
     createForm.resetFields();
+    aiForm.resetFields();
     setIsCreateModalVisible(true);
+  };
+
+  // 处理AI创建实体
+  const handleAICreateEntity = async (values: { prompt: string }) => {
+    if (!project) return;
+
+    try {
+      // 先添加实体到AI Chat上下文（如果是编辑模式）
+      if (editingEntity && editingEntity.id) {
+        const fullEntity = project.schema.entities[editingEntity.id];
+        if (fullEntity) {
+          const entityContext: AIChatContext = {
+            id: uuidv4(),
+            type: 'entity',
+            entityCode: editingEntity.code,
+            entityName: editingEntity.name || editingEntity.code,
+            description: `${editingEntity.name || editingEntity.code}(${editingEntity.code})`
+          };
+          projectStore.addAIChatContext(entityContext);
+        }
+      }
+
+      // 直接调用AI模型（简化版本，实际项目中需要根据具体的AI模型配置）
+      message.info('正在调用AI生成实体...');
+      
+      // 根据用户输入生成模拟响应（实际项目中需要替换为真实的AI调用）
+      const mockResponse: EntityFormValues = {
+        code: values.prompt.includes('用户') ? "user:management" : "entity:new",
+        label: values.prompt.includes('用户') ? "用户管理" : "新实体",
+        description: `基于用户需求"${values.prompt}"生成的实体模型`,
+        status: "enabled" as const,
+        tags: values.prompt.includes('用户') ? ["用户", "管理", "权限"] : ["实体", "新建"]
+      };
+
+      // 使用模拟数据创建实体
+      await handleSaveEntity(mockResponse);
+      
+      message.success('AI创建的实体已保存');
+      
+      // 关闭模态框
+      setIsCreateModalVisible(false);
+      setEditingEntity(null);
+      setActiveTab('ai');
+      aiForm.resetFields();
+      
+    } catch (error) {
+      console.error('AI创建实体失败:', error);
+      message.error('AI创建实体失败');
+    }
   };
 
   // 处理保存实体（新建或编辑）
@@ -754,7 +809,7 @@ const ModelDesigner: React.FC = () => {
     };
 
     loadProject();
-  }, [projectId, navigate]);
+  }, [projectId, navigate, generateEntityTreeData]);
 
   // 监听项目存储更新 - 使用projectStore的订阅机制
   useEffect(() => {
@@ -773,6 +828,17 @@ const ModelDesigner: React.FC = () => {
         if (updatedProject) {
           console.log('🔍 设置重新加载的项目');
           setProject(updatedProject);
+          
+          // 如果有选中的实体，更新selectedEntity以获取最新数据
+          if (selectedEntity) {
+            console.log('🔍 当前选中的实体ID:', selectedEntity.entityInfo.id);
+            const updatedEntity = updatedProject.schema.entities[selectedEntity.entityInfo.id];
+            if (updatedEntity) {
+              console.log('🔍 找到更新后的实体，更新selectedEntity');
+              setSelectedEntity(updatedEntity);
+            }
+          }
+          
           console.log('🔍 生成重新加载的实体树形数据');
           generateEntityTreeData(updatedProject);
         }
@@ -781,7 +847,7 @@ const ModelDesigner: React.FC = () => {
     });
 
     return unsubscribe;
-  }, [projectId, project]);
+  }, [projectId, project, selectedEntity, generateEntityTreeData]);
 
   if (loading) {
     return (
@@ -993,81 +1059,124 @@ const ModelDesigner: React.FC = () => {
       
       {/* 创建/编辑实体模态框 */}
       <Modal
-        title={editingEntity ? "编辑实体" : "手工新建实体"}
+        title={editingEntity ? "编辑实体" : "新建实体"}
         open={isCreateModalVisible}
         onCancel={() => {
           setIsCreateModalVisible(false);
           setEditingEntity(null);
+          setActiveTab('ai');
           createForm.resetFields();
+          aiForm.resetFields();
         }}
-        onOk={() => createForm.submit()}
+        onOk={() => {
+          if (activeTab === 'ai') {
+            aiForm.submit();
+          } else {
+            createForm.submit();
+          }
+        }}
         width={600}
         destroyOnHidden
         maskClosable={false}
       >
-        <Form
-          form={createForm}
-          onFinish={handleSaveEntity}
-          layout="vertical"
-          preserve={true}
-          style={{ paddingTop: 30 }}
-        >
-          <Form.Item
-            name="code"
-            label="实体标识"
-            extra="支持冲号(:)多级结构，最后一级作为表名。示例：user:admin:super"
-            rules={[
-              { required: true, message: '请输入实体标识' },
-              { 
-                pattern: /^[a-zA-Z][a-zA-Z0-9_]*(:([a-zA-Z][a-zA-Z0-9_]*))*$/, 
-                message: '每一级只能包含字母、数字和下划线，且以字母开头' 
-              }
-            ]}
-          >
-            <Input placeholder="例如: user:admin:super" />
-          </Form.Item>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'ai',
+              label: 'AI',
+              children: (
+                <Form
+                  form={aiForm}
+                  onFinish={handleAICreateEntity}
+                  layout="vertical"
+                  preserve={true}
+                >
+                  <Form.Item
+                    name="prompt"
+                    label="需求描述"
+                    // extra="建议详细描述实体的需求，包括用途、字段需求等信息"
+                    rules={[{ required: true, message: '请输入实体创建的需求描述' }]}
+                  >
+                    <Input.TextArea 
+                      rows={6} 
+                      placeholder="例如：“创建员工管理的相关实体，注意，一定要有职位管理”"
+                    />
+                  </Form.Item>
+                </Form>
+              )
+            },
+            {
+              key: 'manual',
+              label: '手工',
+              children: (
+                <Form
+                  form={createForm}
+                  onFinish={handleSaveEntity}
+                  layout="vertical"
+                  preserve={true}
+                >
+                  <Form.Item
+                    name="code"
+                    label="实体标识"
+                    extra="支持冒号(:)多级结构，最后一级作为表名。示例：user:admin:super"
+                    rules={[
+                      { required: true, message: '请输入实体标识' },
+                      { 
+                        pattern: /^[a-zA-Z][a-zA-Z0-9_]*(:([a-zA-Z][a-zA-Z0-9_]*))*$/, 
+                        message: '每一级只能包含字母、数字和下划线，且以字母开头' 
+                      }
+                    ]}
+                  >
+                    <Input placeholder="例如: user:admin:super" />
+                  </Form.Item>
 
-          <Form.Item
-            name="label"
-            label="显示名称"
-            rules={[{ required: true, message: '请输入显示名称' }]}
-          >
-            <Input placeholder="例如: 用户" />
-          </Form.Item>
+                  <Form.Item
+                    name="label"
+                    label="显示名称"
+                    rules={[{ required: true, message: '请输入显示名称' }]}
+                  >
+                    <Input placeholder="例如: 用户" />
+                  </Form.Item>
 
-          <Form.Item
-            name="description"
-            label="实体描述"
-          >
-            <Input.TextArea rows={3} placeholder="描述该实体的作用和用途" />
-          </Form.Item>
+                  <Form.Item
+                    name="description"
+                    label="实体描述"
+                  >
+                    <Input.TextArea rows={3} placeholder="描述该实体的作用和用途" />
+                  </Form.Item>
 
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Form.Item
-              name="status"
-              label="实体状态"
-              initialValue="enabled"
-              style={{ flex: 1 }}
-            >
-              <Select>
-                <Option value="enabled">启用</Option>
-                <Option value="disabled">禁用</Option>
-                <Option value="archived">归档</Option>
-              </Select>
-            </Form.Item>
-          </div>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <Form.Item
+                      name="status"
+                      label="实体状态"
+                      initialValue="enabled"
+                      style={{ flex: 1 }}
+                    >
+                      <Select>
+                        <Option value="enabled">启用</Option>
+                        <Option value="disabled">禁用</Option>
+                        <Option value="archived">归档</Option>
+                      </Select>
+                    </Form.Item>
+                  </div>
 
-          <Form.Item
-            name="tags"
-            label="标签"
-          >
-            <Select
-              mode="tags"
-              placeholder="输入标签后按回车添加"
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-        </Form>
+                  <Form.Item
+                    name="tags"
+                    label="标签"
+                  >
+                    <Select
+                      mode="tags"
+                      placeholder="输入标签后按回车添加"
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Form>
+              )
+            }
+          ]}
+        />
       </Modal>
 
       {/* ADB枚举管理模态框 */}

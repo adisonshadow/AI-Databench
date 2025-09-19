@@ -33,11 +33,10 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
   // 表格列定义
   const columns: ProColumns<ADBField>[] = [
     {
-      title: '排序',
+      title: '',
       dataIndex: 'sort',
-      width: 60,
-      className: 'drag-visible',
-      // render: () => <span style={{ cursor: 'move' }}>⋮⋮</span>,
+      width: 40,
+      className: 'drag-visible'
     },
     {
       title: '字段标识',
@@ -238,7 +237,7 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
 
   useEffect(() => {
 
-    console.log('fields >>>>>>>>>>', fields);
+    // console.log('fields >>>>>>>>>>', fields);
 
     // 为字段添加sort属性，用于拖拽排序
     const fieldsWithSort = fields.map((field, index) => ({
