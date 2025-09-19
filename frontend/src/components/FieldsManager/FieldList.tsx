@@ -23,9 +23,10 @@ interface FieldListProps {
   onDelete: (field: ADBField) => void;
   onAddToChat: (field: ADBField) => void;
   onSortChange?: (fields: ADBField[]) => void;
+  rowStatusMap?: Record<string, 'added' | 'updated' | 'original'>;
 }
 
-const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddToChat, onSortChange }) => {
+const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddToChat, onSortChange, rowStatusMap = {} }) => {
   
   const [fieldsData, setFieldsData] = useState<ADBField[]>([]);
 
@@ -56,7 +57,7 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
       )
     },
     {
-      title: '显示名称',
+      title: '名称',
       dataIndex: ['columnInfo', 'label'],
       key: 'label',
       width: 120
@@ -236,6 +237,9 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
   ];
 
   useEffect(() => {
+
+    console.log('fields >>>>>>>>>>', fields);
+
     // 为字段添加sort属性，用于拖拽排序
     const fieldsWithSort = fields.map((field, index) => ({
       ...field,
@@ -276,12 +280,18 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
           search={false}
           rowKey="sort"  //{(record) => record.columnInfo.id}
           size="small"
-          // scroll={{ x: 800 }}
+          scroll={{ x: 800 }}
           pagination={false}
           dragSortKey="sort"
           onDragSortEnd={handleDragSortEnd}
           toolBarRender={false}
           optionsRender={() => []}
+          rowClassName={(record) => {
+            const fieldCode = record.columnInfo.code || record.columnInfo.id;
+            if (rowStatusMap[fieldCode] === 'added') return 'added-row';
+            if (rowStatusMap[fieldCode] === 'updated') return 'updated-row';
+            return '';
+          }}
         />
       ) : (
         <Empty 

@@ -9,9 +9,10 @@ interface IndexListProps {
   onEdit: (index: Index) => void;
   onDelete: (indexId: string) => void;
   onCreate: () => void;
+  rowStatusMap?: Record<string, 'added' | 'updated' | 'original'>;
 }
 
-const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCreate }) => {
+const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCreate, rowStatusMap = {} }) => {
   const columns: ColumnsType<Index> = [
     {
       title: '索引名称',
@@ -81,6 +82,11 @@ const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCrea
           rowKey="id"
           size="small"
           pagination={false}
+          rowClassName={(record) => {
+            if (rowStatusMap[record.id] === 'added') return 'added-row';
+            if (rowStatusMap[record.id] === 'updated') return 'updated-row';
+            return '';
+          }}
         />
       ) : (
         <Empty 

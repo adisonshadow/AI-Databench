@@ -36,6 +36,28 @@ export class AIContextGenerator {
 - 版本: ${context.adbTypeormSpec.version}
 - 描述: ${context.adbTypeormSpec.description}
 
+### AI 操作返回格式规范
+**重要：所有AI操作必须使用统一的数据结构格式：**
+\`\`\`json
+{
+  "operationType": "create_entity|create_field|update_field|delete_field|create_enum|update_enum|delete_enum|create_relation|update_relation|delete_relation",
+  "data": {
+    // 具体的数据内容，根据operationType而定
+  },
+  "description": "操作描述",
+  "impact": {
+    "level": "low|medium|high",
+    "description": "影响描述"
+  },
+  "requiresConfirmation": true|false
+}
+\`\`\`
+
+**注意：**
+- 必须使用 \`data\` 字段，不要使用 \`entityData\`、\`fieldData\`、\`enumData\`、\`relationData\` 等字段
+- \`operationType\` 已经可以判断数据类型，无需额外的字段名区分
+- 所有操作数据都放在 \`data\` 字段中
+
 ### 核心特性
 ${context.adbTypeormSpec.features.map(feature => `- ${feature}`).join('\n')}
 
@@ -283,16 +305,16 @@ ${userInput}
     
     switch (operationType) {
       case 'create_entity':
-        operationContext = this.generateCreateEntityContext(context);
+        operationContext = this.generateCreateEntityContext(context, userInput);
         break;
       case 'create_field':
-        operationContext = this.generateCreateFieldContext(context);
+        operationContext = this.generateCreateFieldContext(context, userInput);
         break;
       case 'create_enum':
-        operationContext = this.generateCreateEnumContext(context);
+        operationContext = this.generateCreateEnumContext(context, userInput);
         break;
       case 'analysis':
-        operationContext = this.generateAnalysisContext(context);
+        operationContext = this.generateAnalysisContext(context, userInput);
         break;
       default:
         operationContext = this.generateSimplifiedContext(userInput);
@@ -301,7 +323,7 @@ ${userInput}
     return operationContext;
   }
 
-  private generateCreateEntityContext(context: AIContext): string {
+  private generateCreateEntityContext(context: AIContext, userInput: string): string {
     return `
 # 创建实体上下文
 
@@ -339,7 +361,7 @@ ${userInput}
 `;
   }
 
-  private generateCreateFieldContext(context: AIContext): string {
+  private generateCreateFieldContext(context: AIContext, userInput: string): string {
     return `
 # 创建字段上下文
 
@@ -380,7 +402,7 @@ ${userInput}
 `;
   }
 
-  private generateCreateEnumContext(context: AIContext): string {
+  private generateCreateEnumContext(context: AIContext, userInput: string): string {
     return `
 # 创建枚举上下文
 
@@ -428,7 +450,7 @@ ${userInput}
 `;
   }
 
-  private generateAnalysisContext(context: AIContext): string {
+  private generateAnalysisContext(context: AIContext, userInput: string): string {
     return `
 # 分析上下文
 

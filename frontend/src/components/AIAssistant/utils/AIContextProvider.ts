@@ -16,18 +16,22 @@ export class AIContextProvider {
    * 加载当前项目
    */
   private loadCurrentProject(): void {
-    const activeProjectId = StorageService.getActiveProject();
-    if (activeProjectId) {
-      this.currentProject = StorageService.getProject(activeProjectId);
-    }
+    this.currentProject = StorageService.getActiveProject();
   }
 
   /**
    * 获取完整的 AI 上下文信息
    */
   public getAIContext(): AIContext {
+    // 每次获取上下文时都重新加载当前项目，确保数据是最新的
+    this.loadCurrentProject();
+    
+    console.log('🔍 AIContextProvider - 当前项目:', this.currentProject?.name || '无项目');
+    console.log('🔍 AIContextProvider - 实体数量:', this.currentProject ? Object.keys(this.currentProject.schema.entities).length : 0);
+    
     if (!this.currentProject) {
       // 如果没有项目，返回默认的空项目上下文
+      console.log('🔍 AIContextProvider - 使用默认上下文');
       return this.getDefaultContext();
     }
 

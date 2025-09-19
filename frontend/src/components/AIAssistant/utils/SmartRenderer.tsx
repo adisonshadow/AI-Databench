@@ -49,10 +49,12 @@ const CustomCodeBlock: React.FC<any> = (props) => {
   }
   
   // 检查是否是带语言标识的代码块
-  const match = /language-(\w+)/.exec(className || '');
+  const match = /language-([\w-]+)/.exec(className || '');
   if (match) {
     const language = match[1];
     const codeContent = String(children).replace(/\n$/, '');
+
+    // console.log('🔍 language', language);
     
     // 特殊处理 adb-typeorm 和 adb-json 代码块
     const isADBCodeBlock = language === 'adb-typeorm' || language === 'adb-json';
@@ -78,8 +80,8 @@ const CustomCodeBlock: React.FC<any> = (props) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '8px 16px',
-          backgroundColor: isADBCodeBlock ? '#1890ff' : '#1e1e1e',
+          padding: '2px 10px',
+          backgroundColor: isADBCodeBlock ? 'rgb(55 59 68)' : '#1e1e1e',
           borderTopLeftRadius: '6px',
           borderTopRightRadius: '6px',
           borderBottom: '1px solid #333',

@@ -127,6 +127,15 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
   const [editingIndex, setEditingIndex] = useState<Index | null>(null);
   const [indexes, setIndexes] = useState<Index[]>([]);
   
+  // 字段行状态管理
+  const [fieldRowStatusMap, setFieldRowStatusMap] = useState<Record<string, 'added' | 'updated' | 'original'>>({});
+  
+  // 索引行状态管理
+  const [indexRowStatusMap, setIndexRowStatusMap] = useState<Record<string, 'added' | 'updated' | 'original'>>({});
+  
+  // 关系行状态管理
+  const [relationRowStatusMap, setRelationRowStatusMap] = useState<Record<string, 'added' | 'updated' | 'original'>>({});
+  
   // 添加 handleSaveRelation 函数定义
   const handleSaveRelation = async () => {
     try {
@@ -193,6 +202,12 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         },
       };
 
+      // 标记关系行状态
+      setRelationRowStatusMap(prev => ({
+        ...prev,
+        [newRelation.id]: editingRelationInFields ? 'updated' : 'added'
+      }));
+      
       StorageService.saveProject(updatedProject);
       onEntityUpdate(updatedProject);
       setIsRelationCreateModalVisible(false);
@@ -200,6 +215,15 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setRelationValidationResult(null);
       setRelationConflicts([]);
       message.success(editingRelationInFields ? '关系更新成功' : '关系创建成功');
+      
+      // 3秒后清除闪烁效果
+      setTimeout(() => {
+        setRelationRowStatusMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[newRelation.id];
+          return newMap;
+        });
+      }, 3000);
       
     } catch (error) {
       console.error('保存关系失败:', error);
@@ -310,6 +334,13 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         }
       };
 
+      // 标记字段行状态
+      const fieldCode = values.code || fieldId;
+      setFieldRowStatusMap(prev => ({
+        ...prev,
+        [fieldCode]: editingField ? 'updated' : 'added'
+      }));
+      
       // 保存到localStorage
       StorageService.saveProject(updatedProject);
       
@@ -323,6 +354,15 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setEditingField(null);
       
       message.success(`字段${editingField ? '更新' : '创建'}成功`);
+      
+      // 3秒后清除闪烁效果
+      setTimeout(() => {
+        setFieldRowStatusMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[fieldCode];
+          return newMap;
+        });
+      }, 3000);
     } catch (error) {
       console.error('保存字段失败:', error);
       message.error('保存字段失败');
@@ -629,6 +669,12 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         }
       };
 
+      // 标记索引行状态
+      setIndexRowStatusMap(prev => ({
+        ...prev,
+        [indexData.id]: editingIndex ? 'updated' : 'added'
+      }));
+      
       // 保存到localStorage
       StorageService.saveProject(updatedProject);
       
@@ -642,6 +688,15 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setEditingIndex(null);
       
       message.success(`索引${editingIndex ? '更新' : '创建'}成功`);
+      
+      // 3秒后清除闪烁效果
+      setTimeout(() => {
+        setIndexRowStatusMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[indexData.id];
+          return newMap;
+        });
+      }, 3000);
     } catch (error) {
       console.error('保存索引失败:', error);
       message.error('保存索引失败');
@@ -741,6 +796,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
             onDelete={handleDeleteField}
             onAddToChat={handleAddFieldToChat}
             onSortChange={handleFieldSortChange}
+            rowStatusMap={fieldRowStatusMap}
           />
         )}
         
@@ -749,6 +805,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
             relations={entityRelations}
             onEdit={handleEditRelation}
             onDelete={handleDeleteRelation}
+            rowStatusMap={relationRowStatusMap}
           />
         )}
         
@@ -758,6 +815,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
             onEdit={handleEditIndex}
             onDelete={handleDeleteIndex}
             onCreate={handleCreateIndex}
+            rowStatusMap={indexRowStatusMap}
           />
         )}
       </div>

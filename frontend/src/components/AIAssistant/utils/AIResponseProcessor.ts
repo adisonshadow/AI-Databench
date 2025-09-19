@@ -129,12 +129,32 @@ export class AIResponseProcessor {
    * 验证是否为有效的 AI 响应数据
    */
   private isValidAIResponseData(data: any): boolean {
-    return (
-      data &&
-      typeof data === 'object' &&
-      typeof data.operationType === 'string' &&
-      typeof data.data === 'object'
-    );
+    if (!data || typeof data !== 'object' || typeof data.operationType !== 'string') {
+      return false;
+    }
+    
+    // 检查标准格式的 data 字段
+    if (typeof data.data === 'object') {
+      return true;
+    }
+    
+    // 检查驼峰格式的 xxxData 字段
+    const camelCaseFields = ['entityData', 'fieldData', 'enumData', 'relationData', 'indexData'];
+    for (const field of camelCaseFields) {
+      if (typeof data[field] === 'object') {
+        return true;
+      }
+    }
+    
+    // 检查下划线格式的 xxx_data 字段
+    const underscoreFields = ['entity_data', 'field_data', 'enum_data', 'relation_data', 'index_data'];
+    for (const field of underscoreFields) {
+      if (typeof data[field] === 'object') {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -157,14 +177,77 @@ export class AIResponseProcessor {
   }
 
   /**
+   * 标准化AI数据，将所有 xxxData 字段重写为 data
+   */
+  private normalizeAIData(aiData: AIResponseData): AIResponseData {
+    const normalizedData = { ...aiData };
+    
+    // 查找所有可能的 xxxData 字段
+    const dataFields = ['entityData', 'fieldData', 'enumData', 'relationData', 'indexData'];
+    const underscoreDataFields = ['entity_data', 'field_data', 'enum_data', 'relation_data', 'index_data'];
+    
+    // 检查是否有任何 xxxData 字段
+    let foundDataField = null;
+    let foundDataValue = null;
+    
+    // 优先检查 data 字段
+    if (normalizedData.data) {
+      foundDataField = 'data';
+      foundDataValue = normalizedData.data;
+    } else {
+      // 检查其他 xxxData 字段
+      for (const field of dataFields) {
+        if (normalizedData[field as keyof AIResponseData]) {
+          foundDataField = field;
+          foundDataValue = normalizedData[field as keyof AIResponseData];
+          break;
+        }
+      }
+      
+      // 检查下划线格式的字段
+      if (!foundDataField) {
+        for (const field of underscoreDataFields) {
+          if ((normalizedData as any)[field]) {
+            foundDataField = field;
+            foundDataValue = (normalizedData as any)[field];
+            break;
+          }
+        }
+      }
+    }
+    
+    // 如果找到了数据字段，将其标准化为 data
+    if (foundDataField && foundDataValue) {
+      normalizedData.data = foundDataValue;
+      
+      // 清理其他数据字段
+      for (const field of dataFields) {
+        delete normalizedData[field as keyof AIResponseData];
+      }
+      for (const field of underscoreDataFields) {
+        delete (normalizedData as any)[field];
+      }
+      
+      console.log(`🔍 数据标准化: 将 ${foundDataField} 重写为 data`);
+    } else {
+      console.log('🔍 数据标准化: 未找到任何数据字段');
+    }
+    
+    return normalizedData;
+  }
+
+  /**
    * 处理操作数据
    */
   private async processOperationData(
     operationType: AIOperationType,
     aiData: AIResponseData
   ): Promise<ProcessedOperationData> {
-    // 获取操作数据，支持两种格式：entityData 或 data
-    const operationData = aiData.entityData || aiData.data;
+    // 兼容处理：将所有 xxxData 字段重写为 data
+    const normalizedData = this.normalizeAIData(aiData);
+    
+    // 获取操作数据
+    const operationData = normalizedData.data;
     console.log('🔍 processOperationData - 操作数据:', operationData);
     
     switch (operationType) {
@@ -504,7 +587,11 @@ export type AIOperationType =
 
 export interface AIResponseData {
   operationType: string;
-  data: any;
+  data?: any;
+  entityData?: any;
+  fieldData?: any;
+  enumData?: any;
+  relationData?: any;
   description?: string;
   impact?: any;
   requiresConfirmation?: boolean;

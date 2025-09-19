@@ -262,3 +262,24 @@ body {
 .ant-table-tbody >tr:last-child >td{
   border-bottom: none !important;
 }
+
+
+/* 新增行闪烁动画 */
+@keyframes flash-add {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: #1c93f423; }
+}
+
+/* 更新行闪烁动画 */
+@keyframes flash-update {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: #3dffe538; }
+}
+
+.added-row {
+  animation: flash-add .5s ease-in-out 6;
+}
+
+.updated-row {
+  animation: flash-update .5s ease-in-out 6;
+}

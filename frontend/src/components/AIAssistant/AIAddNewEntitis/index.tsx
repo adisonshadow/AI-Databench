@@ -95,7 +95,7 @@ const AIAddNewEntities: React.FC<AIAddNewEntitiesProps> = ({
 
   // 监听AI模型选择变化
   useEffect(() => {
-    const unsubscribe = aiModelSelected.onChange((config) => {
+    const unsubscribe = aiModelSelected.onChange((config: AIModelConfig) => {
       if (config) {
         setSelectedModel(config);
         console.log('aiModelSelected 选择变化:', config);

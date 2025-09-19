@@ -14,9 +14,10 @@ interface RelationListProps {
   relations: Relation[];
   onEdit: (relation: Relation) => void;
   onDelete: (relationId: string) => void;
+  rowStatusMap?: Record<string, 'added' | 'updated' | 'original'>;
 }
 
-const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete }) => {
+const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete, rowStatusMap = {} }) => {
   // 获取关系类型颜色
   const getRelationTypeColor = (type: RelationType): string => {
     const colors = {
@@ -141,6 +142,11 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
           size="small"
           scroll={{ x: 1000 }}
           pagination={false}
+          rowClassName={(record) => {
+            if (rowStatusMap[record.id] === 'added') return 'added-row';
+            if (rowStatusMap[record.id] === 'updated') return 'updated-row';
+            return '';
+          }}
         />
       ) : (
         <Empty 

@@ -56,6 +56,7 @@ interface SchemaTreeItem {
   isLocked?: boolean;
   children?: SchemaTreeItem[];
   fields?: ADBEntity['fields'];
+  rowStatus?: 'added' | 'updated' | 'original'; // 新增行状态
 }
 
 interface EntityFormValues {
@@ -80,19 +81,37 @@ const ModelDesigner: React.FC = () => {
   const [editingEntity, setEditingEntity] = useState<SchemaTreeItem | null>(null);
   const [createForm] = Form.useForm();
   // const projectStore = useProjectStore();
+  
+  // 行状态管理
+  const [rowStatusMap, setRowStatusMap] = useState<Record<string, 'added' | 'updated' | 'original'>>({});
 
   // 处理项目更新
   const handleProjectUpdate = (updatedProject: Project) => {
-    console.log('🔍 ========== handleProjectUpdate 被调用 ==========');
-    console.log('🔍 更新后的项目实体数量:', Object.keys(updatedProject.schema.entities).length);
-    console.log('🔍 更新后的项目实体列表:', Object.keys(updatedProject.schema.entities));
-    console.log('🔍 更新前的项目状态:', project);
-    console.log('🔍 更新后的项目状态:', updatedProject);
+    // console.log('🔍 ========== handleProjectUpdate 被调用 ==========');
+    // console.log('🔍 更新后的项目实体数量:', Object.keys(updatedProject.schema.entities).length);
+    // console.log('🔍 更新后的项目实体列表:', Object.keys(updatedProject.schema.entities));
+    // console.log('🔍 更新前的项目状态:', project);
+    // console.log('🔍 更新后的项目状态:', updatedProject);
     
-    console.log('🔍 设置项目状态');
+    // console.log('🔍 设置项目状态');
     setProject(updatedProject);
     
-    console.log('🔍 生成实体树形数据');
+    // 如果有选中的实体，重新设置selectedEntity以获取最新的数据
+    if (selectedEntity) {
+      // console.log('🔍 重新设置selectedEntity，当前选中实体ID:', selectedEntity.entityInfo.id);
+      const updatedEntity = Object.values(updatedProject.schema.entities).find(
+        entity => entity.entityInfo.id === selectedEntity.entityInfo.id
+      );
+      if (updatedEntity) {
+        // console.log('🔍 找到更新的实体，重新设置selectedEntity');
+        setSelectedEntity(updatedEntity);
+      } else {
+        // console.log('🔍 未找到更新的实体，清除selectedEntity');
+        setSelectedEntity(null);
+      }
+    }
+    
+    // console.log('🔍 生成实体树形数据');
     generateEntityTreeData(updatedProject);
     
     console.log('🔍 ========== handleProjectUpdate 完成 ==========');
@@ -100,13 +119,13 @@ const ModelDesigner: React.FC = () => {
 
   // 生成实体树形数据（参考旧项目buildSchemaTree）
   const generateEntityTreeData = (project: Project) => {
-    console.log('🔍 ========== 生成实体树形数据 ==========');
-    console.log('🔍 输入项目:', project);
-    console.log('🔍 项目实体:', project.schema.entities);
+    // console.log('🔍 ========== 生成实体树形数据 ==========');
+    // console.log('🔍 输入项目:', project);
+    // console.log('🔍 项目实体:', project.schema.entities);
     
     const entities = Object.values(project.schema.entities || {});
-    console.log('🔍 实体数组:', entities);
-    console.log('🔍 实体数量:', entities.length);
+    // console.log('🔍 实体数组:', entities);
+    // console.log('🔍 实体数量:', entities.length);
     
     const allCodes: string[] = [];
     const codeMap = new Map<string, SchemaTreeItem>();
@@ -129,10 +148,12 @@ const ModelDesigner: React.FC = () => {
               description: entity.entityInfo.description,
               status: entity.entityInfo.status || 'enabled',
               isLocked: entity.entityInfo.isLocked || false,
-              fields: entity.fields
+              fields: entity.fields,
+              rowStatus: rowStatusMap[currentPath] || 'original'
             } : {
               name: code,
-              status: 'enabled'
+              status: 'enabled',
+              rowStatus: rowStatusMap[currentPath] || 'original'
             }),
             code: currentPath,
             children: []
@@ -169,16 +190,16 @@ const ModelDesigner: React.FC = () => {
     
     cleanupEmptyChildren(result);
     
-    console.log('🔍 清理后的结果:', result);
-    console.log('🔍 结果数量:', result.length);
-    console.log('🔍 展开的键:', [...new Set(allCodes)]);
+    // console.log('🔍 清理后的结果:', result);
+    // console.log('🔍 结果数量:', result.length);
+    // console.log('🔍 展开的键:', [...new Set(allCodes)]);
     
     // 设置所有节点为展开状态
     setExpandedRowKeys([...new Set(allCodes)]);
     setEntityTreeData(result);
     
-    console.log('🔍 设置实体树形数据完成');
-    console.log('🔍 ========== 生成实体树形数据完成 ==========');
+    // console.log('🔍 设置实体树形数据完成');
+    // console.log('🔍 ========== 生成实体树形数据完成 ==========');
   };
 
   // 处理实体选择
@@ -230,7 +251,7 @@ const ModelDesigner: React.FC = () => {
   const handleEntityEdit = (entity: SchemaTreeItem) => {
     if (!entity.id) return;
     
-    console.log('编辑实体数据:', entity);
+    // console.log('编辑实体数据:', entity);
     
     setEditingEntity(entity);
     const formValues = {
@@ -254,11 +275,11 @@ const ModelDesigner: React.FC = () => {
   const handleEntityDelete = async (entity: SchemaTreeItem) => {
     console.log('🔍 ========== 开始删除实体 ==========');
     console.log('🔍 要删除的实体:', entity);
-    console.log('🔍 实体ID:', entity.id);
-    console.log('🔍 实体名称:', entity.name);
-    console.log('🔍 实体代码:', entity.code);
-    console.log('🔍 当前项目:', project);
-    console.log('🔍 当前项目ID:', projectId);
+    // console.log('🔍 实体ID:', entity.id);
+    // console.log('🔍 实体名称:', entity.name);
+    // console.log('🔍 实体代码:', entity.code);
+    // console.log('🔍 当前项目:', project);
+    // console.log('🔍 当前项目ID:', projectId);
     
     if (!entity.id || !project) {
       console.log('❌ 缺少必要参数 - entity.id:', entity.id, 'project:', !!project);
@@ -362,9 +383,12 @@ const ModelDesigner: React.FC = () => {
               <span>{text}</span>
             </Space>
             {record.description && (
-              <div style={{ color: '#666', fontSize: '12px' }}>
+              <Typography.Text 
+                style={{ color: '#666', fontSize: '12px' }}
+                ellipsis
+              >
                 {record.description}
-              </div>
+              </Typography.Text>
             )}
           </div>
         );
@@ -480,11 +504,26 @@ const ModelDesigner: React.FC = () => {
         }
       };
 
+      // 标记行状态为新增
+      setRowStatusMap(prev => ({
+        ...prev,
+        [entity.entityInfo.code]: 'added'
+      }));
+      
       StorageService.saveProject(updatedProject);
       handleProjectUpdate(updatedProject);
       
       message.success('AI创建的实体已保存');
       setIsAICreateModalVisible(false);
+      
+      // 3秒后清除闪烁效果
+      setTimeout(() => {
+        setRowStatusMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[entity.entityInfo.code];
+          return newMap;
+        });
+      }, 3000);
     } catch (error) {
       console.error('保存AI创建的实体失败:', error);
       message.error('保存AI创建的实体失败');
@@ -548,6 +587,12 @@ const ModelDesigner: React.FC = () => {
         // 暂停projectStore通知
         projectStore.pauseNotifications();
         
+        // 标记行状态为更新
+        setRowStatusMap(prev => ({
+          ...prev,
+          [values.code]: 'updated'
+        }));
+        
         // 保存到localStorage
         StorageService.saveProject(updatedProject);
         handleProjectUpdate(updatedProject);
@@ -560,6 +605,15 @@ const ModelDesigner: React.FC = () => {
         createForm.resetFields();
         
         message.success('实体更新成功');
+        
+        // 3秒后清除闪烁效果
+        setTimeout(() => {
+          setRowStatusMap(prev => {
+            const newMap = { ...prev };
+            delete newMap[values.code];
+            return newMap;
+          });
+        }, 3000);
       } else {
         // 新建实体
         const entityId = uuidv4(); // 使用uuid生成唯一ID
@@ -600,6 +654,12 @@ const ModelDesigner: React.FC = () => {
         // 暂停projectStore通知
         projectStore.pauseNotifications();
         
+        // 标记行状态为新增
+        setRowStatusMap(prev => ({
+          ...prev,
+          [values.code]: 'added'
+        }));
+        
         // 保存到localStorage
         StorageService.saveProject(updatedProject);
         handleProjectUpdate(updatedProject);
@@ -612,6 +672,15 @@ const ModelDesigner: React.FC = () => {
         createForm.resetFields();
         
         message.success('实体创建成功');
+        
+        // 3秒后清除闪烁效果
+        setTimeout(() => {
+          setRowStatusMap(prev => {
+            const newMap = { ...prev };
+            delete newMap[values.code];
+            return newMap;
+          });
+        }, 3000);
       }
     } catch (error) {
       console.error('保存实体失败:', error);
@@ -806,6 +875,11 @@ const ModelDesigner: React.FC = () => {
                   pagination={false}
                   size="small"
                   showHeader={false}
+                  rowClassName={(record) => {
+                    if (record.rowStatus === 'added') return 'added-row';
+                    if (record.rowStatus === 'updated') return 'updated-row';
+                    return '';
+                  }}
                   expandable={{
                     expandedRowKeys,
                     onExpandedRowsChange: (expandedKeys: readonly Key[]) => {
