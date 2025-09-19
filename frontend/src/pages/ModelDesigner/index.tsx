@@ -15,10 +15,10 @@ import {
   Table,
   Badge,
   Dropdown,
-  Flex
+  Flex,
+  Popconfirm
 } from 'antd';
 import { 
-  PlusOutlined, 
   SubnodeOutlined, 
   PartitionOutlined,
   BuildOutlined,
@@ -83,15 +83,31 @@ const ModelDesigner: React.FC = () => {
 
   // 处理项目更新
   const handleProjectUpdate = (updatedProject: Project) => {
-    console.log('🔍 handleProjectUpdate 被调用');
+    console.log('🔍 ========== handleProjectUpdate 被调用 ==========');
     console.log('🔍 更新后的项目实体数量:', Object.keys(updatedProject.schema.entities).length);
+    console.log('🔍 更新后的项目实体列表:', Object.keys(updatedProject.schema.entities));
+    console.log('🔍 更新前的项目状态:', project);
+    console.log('🔍 更新后的项目状态:', updatedProject);
+    
+    console.log('🔍 设置项目状态');
     setProject(updatedProject);
+    
+    console.log('🔍 生成实体树形数据');
     generateEntityTreeData(updatedProject);
+    
+    console.log('🔍 ========== handleProjectUpdate 完成 ==========');
   };
 
   // 生成实体树形数据（参考旧项目buildSchemaTree）
   const generateEntityTreeData = (project: Project) => {
+    console.log('🔍 ========== 生成实体树形数据 ==========');
+    console.log('🔍 输入项目:', project);
+    console.log('🔍 项目实体:', project.schema.entities);
+    
     const entities = Object.values(project.schema.entities || {});
+    console.log('🔍 实体数组:', entities);
+    console.log('🔍 实体数量:', entities.length);
+    
     const allCodes: string[] = [];
     const codeMap = new Map<string, SchemaTreeItem>();
     const result: SchemaTreeItem[] = [];
@@ -153,9 +169,16 @@ const ModelDesigner: React.FC = () => {
     
     cleanupEmptyChildren(result);
     
+    console.log('🔍 清理后的结果:', result);
+    console.log('🔍 结果数量:', result.length);
+    console.log('🔍 展开的键:', [...new Set(allCodes)]);
+    
     // 设置所有节点为展开状态
     setExpandedRowKeys([...new Set(allCodes)]);
     setEntityTreeData(result);
+    
+    console.log('🔍 设置实体树形数据完成');
+    console.log('🔍 ========== 生成实体树形数据完成 ==========');
   };
 
   // 处理实体选择
@@ -229,22 +252,28 @@ const ModelDesigner: React.FC = () => {
 
   // 处理实体删除
   const handleEntityDelete = async (entity: SchemaTreeItem) => {
-    console.log('🔍 开始删除实体:', entity);
+    console.log('🔍 ========== 开始删除实体 ==========');
+    console.log('🔍 要删除的实体:', entity);
     console.log('🔍 实体ID:', entity.id);
-    console.log('🔍 项目:', project);
+    console.log('🔍 实体名称:', entity.name);
+    console.log('🔍 实体代码:', entity.code);
+    console.log('🔍 当前项目:', project);
+    console.log('🔍 当前项目ID:', projectId);
     
     if (!entity.id || !project) {
-      console.log('❌ 缺少必要参数');
+      console.log('❌ 缺少必要参数 - entity.id:', entity.id, 'project:', !!project);
       return;
     }
     
     try {
       console.log('🔍 删除前的实体列表:', Object.keys(project.schema.entities));
+      console.log('🔍 删除前的实体详情:', project.schema.entities);
       
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [entity.id]: _, ...remainingEntities } = project.schema.entities;
+      const { [entity.id]: deletedEntity, ...remainingEntities } = project.schema.entities;
       
+      console.log('🔍 被删除的实体:', deletedEntity);
       console.log('🔍 删除后的实体列表:', Object.keys(remainingEntities));
+      console.log('🔍 删除后的实体详情:', remainingEntities);
       
       const updatedProject = {
         ...project,
@@ -254,25 +283,39 @@ const ModelDesigner: React.FC = () => {
         }
       };
 
+      console.log('🔍 更新后的项目:', updatedProject);
+      console.log('🔍 更新后项目的实体数量:', Object.keys(updatedProject.schema.entities).length);
+
+      console.log('🔍 暂停projectStore通知');
+      projectStore.pauseNotifications();
+      
       console.log('🔍 保存项目到localStorage');
       StorageService.saveProject(updatedProject);
+      
+      // 验证保存是否成功
+      const savedProject = StorageService.getProject(projectId!);
+      console.log('🔍 验证保存结果 - 实体数量:', Object.keys(savedProject?.schema.entities || {}).length);
+      console.log('🔍 验证保存结果 - 实体列表:', Object.keys(savedProject?.schema.entities || {}));
+      console.log('🔍 验证保存结果 - 完整项目:', savedProject);
       
       console.log('🔍 通知项目更新');
       handleProjectUpdate(updatedProject);
       
-      console.log('🔍 通知projectStore更新');
-      projectStore.notifyUpdate();
+      console.log('🔍 恢复projectStore通知');
+      projectStore.resumeNotifications();
       
       // 如果删除的是当前选中的实体，清除选中状态
       if (selectedEntity?.entityInfo.id === entity.id) {
-        console.log('🔍 清除选中状态');
+        console.log('🔍 清除选中状态 - 当前选中实体ID:', selectedEntity?.entityInfo.id);
         setSelectedEntity(null);
       }
       
       console.log('✅ 实体删除成功');
       message.success('实体删除成功');
+      console.log('🔍 ========== 删除完成 ==========');
     } catch (error) {
       console.error('❌ 删除实体失败:', error);
+      console.log('🔍 ========== 删除失败 ==========');
       message.error('删除实体失败');
     }
   };
@@ -356,23 +399,30 @@ const ModelDesigner: React.FC = () => {
             disabled: record.isLocked,
             onClick: () => handleEntityEdit(record)
           },
-          {
-            key: 'delete',
-            label: '删除',
-            icon: <DeleteOutlined />,
-            disabled: record.isLocked,
-            danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: '删除实体',
-                content: `确定要删除 "${record.name}" 吗？此操作不可恢复。`,
-                okText: '确定',
-                cancelText: '取消',
-                okType: 'danger',
-                onOk: () => handleEntityDelete(record)
-              });
-            }
-          }
+        {
+          key: 'delete',
+          label: (
+            <Popconfirm
+              title="删除实体"
+              description={`确定要删除 "${record.name}" 吗？此操作不可恢复。`}
+              onConfirm={() => {
+                console.log('🔍 用户确认删除');
+                handleEntityDelete(record);
+              }}
+              onCancel={() => {
+                console.log('🔍 用户取消删除');
+              }}
+              okText="确定"
+              cancelText="取消"
+              okType="danger"
+            >
+              <span>删除</span>
+            </Popconfirm>
+          ),
+          icon: <DeleteOutlined />,
+          disabled: record.isLocked,
+          danger: true
+        }
         ];
         
         return (
@@ -382,7 +432,12 @@ const ModelDesigner: React.FC = () => {
                 items: dropdownItems.map(item => ({
                   ...item,
                   onClick: () => {
-                    item.onClick();
+                    console.log('🔍 ========== Dropdown菜单项点击 ==========');
+                    console.log('🔍 点击的菜单项:', item.key, item.label);
+                    console.log('🔍 菜单项数据:', item);
+                    if (item.onClick) {
+                      item.onClick();
+                    }
                   }
                 }))
               }}
@@ -391,7 +446,11 @@ const ModelDesigner: React.FC = () => {
               <Button
                 type="text"
                 icon={<MoreOutlined />}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  console.log('🔍 ========== More按钮点击 ==========');
+                  console.log('🔍 More按钮点击事件:', e);
+                  e.stopPropagation();
+                }}
               />
             </Dropdown>
           </Flex>
@@ -486,9 +545,15 @@ const ModelDesigner: React.FC = () => {
           }
         };
 
+        // 暂停projectStore通知
+        projectStore.pauseNotifications();
+        
         // 保存到localStorage
         StorageService.saveProject(updatedProject);
         handleProjectUpdate(updatedProject);
+        
+        // 恢复projectStore通知
+        projectStore.resumeNotifications();
 
         setIsCreateModalVisible(false);
         setEditingEntity(null);
@@ -532,9 +597,15 @@ const ModelDesigner: React.FC = () => {
           }
         };
 
+        // 暂停projectStore通知
+        projectStore.pauseNotifications();
+        
         // 保存到localStorage
         StorageService.saveProject(updatedProject);
         handleProjectUpdate(updatedProject);
+        
+        // 恢复projectStore通知
+        projectStore.resumeNotifications();
 
         setIsCreateModalVisible(false);
         setEditingEntity(null);
@@ -619,19 +690,29 @@ const ModelDesigner: React.FC = () => {
   // 监听项目存储更新 - 使用projectStore的订阅机制
   useEffect(() => {
     const unsubscribe = projectStore.subscribe(() => {
+      console.log('🔍 ========== projectStore订阅触发 ==========');
       const currentProjectId = projectStore.getCurrentProjectId();
+      console.log('🔍 projectStore订阅触发:', { currentProjectId, projectId });
+      console.log('🔍 当前项目状态:', project);
+      
       if (currentProjectId === projectId) {
         // 重新加载项目数据
         const updatedProject = StorageService.getProject(projectId);
+        console.log('🔍 从localStorage重新加载项目:', updatedProject);
+        console.log('🔍 重新加载的项目实体数量:', Object.keys(updatedProject?.schema.entities || {}).length);
+        
         if (updatedProject) {
+          console.log('🔍 设置重新加载的项目');
           setProject(updatedProject);
+          console.log('🔍 生成重新加载的实体树形数据');
           generateEntityTreeData(updatedProject);
         }
       }
+      console.log('🔍 ========== projectStore订阅处理完成 ==========');
     });
 
     return unsubscribe;
-  }, [projectId]);
+  }, [projectId, project]);
 
   if (loading) {
     return (

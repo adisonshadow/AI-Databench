@@ -1300,12 +1300,13 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
                   key={index}
                   style={{
                     display: 'inline-block',
-                    backgroundColor: badge.color,
-                    color: 'white',
+                    // backgroundColor: badge.color,
+                    backgroundColor: '#ffffff14',
+                    color: '#ffffff94',
                     padding: '2px 8px',
                     borderRadius: '4px',
                     fontSize: '12px',
-                    fontWeight: 500
+                    // fontWeight: 500
                   }}
                 >
                   {badge.text}
@@ -1313,29 +1314,25 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
               ))}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Text style={{ color: '#fff', fontWeight: 500 }}>AI 建议操作：</Text>
-            <Button
-              type="primary"
-              size="small"
-              onClick={confirmOperation}
-              style={{
-                backgroundColor: '#52c41a',
-                borderColor: '#52c41a'
-              }}
-            >
-              接受
-            </Button>
-            <Button
-              size="small"
-              onClick={rejectOperation}
-              style={{
-                color: '#fff',
-                borderColor: '#666'
-              }}
-            >
-              拒绝
-            </Button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Text style={{ color: '#ffffff94', fontSize: '12px' }}>操作确认：</Text>
+            <Space>
+              <Button
+                color="default"
+                size="small"
+                onClick={rejectOperation}
+              >
+                Reject
+              </Button>
+              <Button
+                color="default" 
+                variant="filled"
+                size="small"
+                onClick={confirmOperation}
+              >
+                Accept all
+              </Button>
+            </Space>
           </div>
         </div>
       )}

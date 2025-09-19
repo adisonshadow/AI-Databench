@@ -86,7 +86,7 @@ body {
 
 /* 表单样式优化 */
 .ant-form-item-label > label {
-  color: #ffffff !important;
+  color: #ffffffce !important;
 }
 
 /* .ant-input-affix-wrapper {
@@ -102,7 +102,7 @@ body {
 } */
 
 /* 按钮样式优化 */
-.ant-btn-default {
+/* .ant-btn-default {
   background-color: #262626 !important;
   border-color: #434343 !important;
   color: #ffffff !important;
@@ -111,7 +111,7 @@ body {
 .ant-btn-default:hover {
   background-color: #434343 !important;
   border-color: #1890ff !important;
-}
+} */
 
 /* Tab样式优化 - Dark主题 */
 .ant-tabs .ant-tabs-tab {

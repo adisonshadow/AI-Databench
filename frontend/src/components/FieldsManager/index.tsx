@@ -362,8 +362,15 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         }
       };
 
+      console.log('🔍 暂停projectStore通知');
+      projectStore.pauseNotifications();
+      
       console.log('🔍 保存项目到localStorage');
       StorageService.saveProject(updatedProject);
+      
+      // 验证保存是否成功
+      const savedProject = StorageService.getProject(project.id);
+      console.log('🔍 验证保存结果:', Object.keys(savedProject?.schema.entities[entity.entityInfo.id]?.fields || {}));
       
       console.log('🔍 更新本地字段状态');
       // 立即更新本地状态
@@ -373,9 +380,8 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       // 通知父组件更新
       onEntityUpdate(updatedProject);
       
-      console.log('🔍 通知projectStore更新');
-      // 通知projectStore更新
-      projectStore.notifyUpdate();
+      console.log('🔍 恢复projectStore通知');
+      projectStore.resumeNotifications();
       
       console.log('✅ 字段删除成功');
       message.success('字段删除成功');
@@ -386,23 +392,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
   };
 
   // 处理删除字段确认
-  const handleDeleteFieldWithConfirm = (field: ADBField) => {
-    console.log('🔍 显示删除确认对话框:', field);
-    Modal.confirm({
-      title: '确定删除此字段？',
-      content: '删除后将无法恢复，相关关系也会被清除',
-      okText: '删除',
-      cancelText: '取消',
-      okType: 'danger',
-      onOk: () => {
-        console.log('🔍 用户确认删除字段');
-        handleDeleteField(field);
-      },
-      onCancel: () => {
-        console.log('🔍 用户取消删除字段');
-      }
-    });
-  };
+  // handleDeleteFieldWithConfirm 函数已移除，现在直接使用 Popconfirm 组件
 
   // 处理字段排序变化
   const handleFieldSortChange = (sortedFields: ADBField[]) => {
@@ -748,7 +738,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
           <FieldList 
             fields={fields}
             onEdit={handleEditField}
-            onDelete={handleDeleteFieldWithConfirm}
+            onDelete={handleDeleteField}
             onAddToChat={handleAddFieldToChat}
             onSortChange={handleFieldSortChange}
           />

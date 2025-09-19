@@ -522,7 +522,7 @@ export interface AIProcessResult {
 export interface AIBadge {
   type: 'success' | 'warning' | 'error' | 'info';
   text: string;
-  color: string;
+  color?: string;
   icon?: string;
 }
 

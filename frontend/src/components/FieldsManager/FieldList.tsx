@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Space, Button, Empty, Dropdown, Flex } from 'antd';
+import { Tag, Space, Button, Empty, Dropdown, Flex, Popconfirm } from 'antd';
 import { 
   EditOutlined, 
   DeleteOutlined,
@@ -185,14 +185,26 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
           },
           {
             key: 'delete',
-            label: '删除',
+            label: (
+              <Popconfirm
+                title="删除字段"
+                description={`确定要删除字段 "${record.columnInfo.label}" 吗？此操作不可恢复。`}
+                onConfirm={() => {
+                  console.log('🔍 FieldList: 用户确认删除字段:', record);
+                  onDelete(record);
+                }}
+                onCancel={() => {
+                  console.log('🔍 FieldList: 用户取消删除字段');
+                }}
+                okText="确定"
+                cancelText="取消"
+                okType="danger"
+              >
+                <span>删除</span>
+              </Popconfirm>
+            ),
             icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              console.log('🔍 FieldList: 点击删除按钮:', record);
-              // 这里需要处理删除确认，但由于Dropdown的限制，我们需要用其他方式
-              onDelete(record);
-            }
+            danger: true
           }
         ];
         
@@ -203,7 +215,9 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
                 items: dropdownItems.map(item => ({
                   ...item,
                   onClick: () => {
-                    item.onClick();
+                    if (item.onClick) {
+                      item.onClick();
+                    }
                   }
                 }))
               }}
@@ -240,6 +254,7 @@ const FieldList: React.FC<FieldListProps> = ({ fields, onEdit, onDelete, onAddTo
     
     // 移除sort属性，恢复原始字段数据
     const fieldsWithoutSort = newDataSource.map((field) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { sort, ...fieldWithoutSort } = field as ADBField & { sort?: number };
       return fieldWithoutSort as ADBField;
     });

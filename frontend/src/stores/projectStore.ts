@@ -18,6 +18,7 @@ class ProjectStore {
   private listeners: Set<() => void> = new Set();
   private currentProjectId: string | null = null;
   private aiChatContexts: AIChatContext[] = [];
+  private isPaused: boolean = false; // 添加暂停状态
 
   // 订阅项目更新
   subscribe(listener: () => void) {
@@ -29,7 +30,23 @@ class ProjectStore {
 
   // 通知所有监听者项目已更新
   notifyUpdate() {
+    if (this.isPaused) {
+      console.log('🔍 projectStore通知被暂停，跳过');
+      return;
+    }
     this.listeners.forEach(listener => listener());
+  }
+
+  // 暂停通知
+  pauseNotifications() {
+    console.log('🔍 暂停projectStore通知');
+    this.isPaused = true;
+  }
+
+  // 恢复通知
+  resumeNotifications() {
+    console.log('🔍 恢复projectStore通知');
+    this.isPaused = false;
   }
 
   // 设置当前项目ID
@@ -96,7 +113,9 @@ export const useProjectStore = () => {
     getCurrentProject: () => projectStore.getCurrentProject(),
     getCurrentProjectId: () => projectStore.getCurrentProjectId(),
     notifyUpdate: () => projectStore.notifyUpdate(),
-    setCurrentProjectId: (id: string | null) => projectStore.setCurrentProjectId(id)
+    setCurrentProjectId: (id: string | null) => projectStore.setCurrentProjectId(id),
+    pauseNotifications: () => projectStore.pauseNotifications(),
+    resumeNotifications: () => projectStore.resumeNotifications()
   };
 };
 
