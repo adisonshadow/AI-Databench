@@ -17,7 +17,8 @@ import {
   Dropdown,
   Flex,
   Popconfirm,
-  Tabs
+  Tabs,
+  Tooltip
 } from 'antd';
 import { 
   SubnodeOutlined, 
@@ -38,10 +39,11 @@ import { StorageService } from '@/stores/storage';
 import { projectStore, type AIChatContext } from '@/stores/projectStore';
 import FieldsManager from '@/components/FieldsManager';
 import ADBEnumManager from '@/components/ADBEnumManager';
-import AIAddNewEntities from '@/components/AIAssistant/AIAddNewEntitis';
+//import AIAddNewEntities from '@/components/AIAssistant/AIAddNewEntitis';
 import type { Project, ADBEntity } from '@/types/storage';
 import type { ColumnsType } from 'antd/es/table';
 import type { Key } from 'antd/es/table/interface';
+import { eventBus, EVENTS } from '@/utils/eventBus';
 
 
 const { Text } = Typography;
@@ -78,7 +80,7 @@ const ModelDesigner: React.FC = () => {
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEnumModalVisible, setIsEnumModalVisible] = useState(false);
-  const [isAICreateModalVisible, setIsAICreateModalVisible] = useState(false);
+  // const [isAICreateModalVisible, setIsAICreateModalVisible] = useState(false);
   const [editingEntity, setEditingEntity] = useState<SchemaTreeItem | null>(null);
   const [createForm] = Form.useForm();
   const [aiForm] = Form.useForm();
@@ -253,9 +255,7 @@ const ModelDesigner: React.FC = () => {
   // 处理实体编辑
   const handleEntityEdit = (entity: SchemaTreeItem) => {
     if (!entity.id) return;
-    
-    // console.log('编辑实体数据:', entity);
-    
+
     setEditingEntity(entity);
     setActiveTab('manual'); // 编辑时默认显示手工Tab
     const formValues = {
@@ -265,7 +265,6 @@ const ModelDesigner: React.FC = () => {
       status: entity.status
     };
     
-    console.log('设置表单值:', formValues);
     createForm.setFieldsValue(formValues);
     setIsCreateModalVisible(true);
     
@@ -372,7 +371,7 @@ const ModelDesigner: React.FC = () => {
       },
     },
     {
-      title: '名称',
+      title: 'Name',
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: SchemaTreeItem) => {
@@ -387,19 +386,29 @@ const ModelDesigner: React.FC = () => {
               <span>{text}</span>
             </Space>
             {record.description && (
-              <Typography.Text 
-                style={{ color: '#666', fontSize: '12px' }}
-                ellipsis
-              >
-                {record.description}
-              </Typography.Text>
+              <Tooltip title={record.description}>
+                <span 
+                  style={{ 
+                    color: '#666', 
+                    fontSize: '12px',
+                    WebkitLineClamp: 1,
+                    lineClamp: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitBoxOrient: 'vertical'
+                  }}
+                >
+                  {record.description}
+                </span>
+              </Tooltip>
             )}
           </div>
         );
       },
     },
     {
-      title: '操作',
+      title: 'Action',
       key: 'action',
       fixed: 'right' as const,
       width: 40,
@@ -410,19 +419,19 @@ const ModelDesigner: React.FC = () => {
         const dropdownItems = [
           {
             key: 'lock',
-            label: record.isLocked ? '解锁' : '锁定',
+            label: record.isLocked ? 'Unlock' : 'Lock',
             icon: record.isLocked ? <UnlockOutlined /> : <LockOutlined />,
             onClick: () => handleEntityLockToggle(record)
           },
           {
             key: 'addToChat',
-            label: '添加实体到AI Chat',
+            label: 'Add Entity to AI Chat',
             icon: <MessageOutlined />,
             onClick: () => handleAddEntityToChat(record)
           },
           {
             key: 'edit',
-            label: '编辑',
+            label: 'Edit',
             icon: <EditOutlined />,
             disabled: record.isLocked,
             onClick: () => handleEntityEdit(record)
@@ -431,20 +440,16 @@ const ModelDesigner: React.FC = () => {
           key: 'delete',
           label: (
             <Popconfirm
-              title="删除实体"
-              description={`确定要删除 "${record.name}" 吗？此操作不可恢复。`}
+              title="Delete Entity"
+              description={`Are you sure you want to delete "${record.name}"? This action cannot be undone.`}
               onConfirm={() => {
-                console.log('🔍 用户确认删除');
                 handleEntityDelete(record);
               }}
-              onCancel={() => {
-                console.log('🔍 用户取消删除');
-              }}
-              okText="确定"
-              cancelText="取消"
+              okText="Delete"
+              cancelText="Cancel"
               okType="danger"
             >
-              <span>删除</span>
+              <span>Delete</span>
             </Popconfirm>
           ),
           icon: <DeleteOutlined />,
@@ -460,9 +465,6 @@ const ModelDesigner: React.FC = () => {
                 items: dropdownItems.map(item => ({
                   ...item,
                   onClick: () => {
-                    console.log('🔍 ========== Dropdown菜单项点击 ==========');
-                    console.log('🔍 点击的菜单项:', item.key, item.label);
-                    console.log('🔍 菜单项数据:', item);
                     if (item.onClick) {
                       item.onClick();
                     }
@@ -475,8 +477,6 @@ const ModelDesigner: React.FC = () => {
                 type="text"
                 icon={<MoreOutlined />}
                 onClick={(e) => {
-                  console.log('🔍 ========== More按钮点击 ==========');
-                  console.log('🔍 More按钮点击事件:', e);
                   e.stopPropagation();
                 }}
               />
@@ -493,46 +493,46 @@ const ModelDesigner: React.FC = () => {
   // };
 
   // 处理AI创建的实体
-  const handleAIEntityCreated = (entity: ADBEntity) => {
-    if (!project) return;
+  // const handleAIEntityCreated = (entity: ADBEntity) => {
+  //   if (!project) return;
 
-    try {
-      const updatedProject = {
-        ...project,
-        schema: {
-          ...project.schema,
-          entities: {
-            ...project.schema.entities,
-            [entity.entityInfo.id]: entity
-          }
-        }
-      };
+  //   try {
+  //     const updatedProject = {
+  //       ...project,
+  //       schema: {
+  //         ...project.schema,
+  //         entities: {
+  //           ...project.schema.entities,
+  //           [entity.entityInfo.id]: entity
+  //         }
+  //       }
+  //     };
 
-      // 标记行状态为新增
-      setRowStatusMap(prev => ({
-        ...prev,
-        [entity.entityInfo.code]: 'added'
-      }));
+  //     // 标记行状态为新增
+  //     setRowStatusMap(prev => ({
+  //       ...prev,
+  //       [entity.entityInfo.code]: 'added'
+  //     }));
       
-      StorageService.saveProject(updatedProject);
-      handleProjectUpdate(updatedProject);
+  //     StorageService.saveProject(updatedProject);
+  //     handleProjectUpdate(updatedProject);
       
-      message.success('AI创建的实体已保存');
-      setIsAICreateModalVisible(false);
+  //     message.success('AI创建的实体已保存');
+  //     // setIsAICreateModalVisible(false);
       
-      // 3秒后清除闪烁效果
-      setTimeout(() => {
-        setRowStatusMap(prev => {
-          const newMap = { ...prev };
-          delete newMap[entity.entityInfo.code];
-          return newMap;
-        });
-      }, 3000);
-    } catch (error) {
-      console.error('保存AI创建的实体失败:', error);
-      message.error('保存AI创建的实体失败');
-    }
-  };
+  //     // 3秒后清除闪烁效果
+  //     setTimeout(() => {
+  //       setRowStatusMap(prev => {
+  //         const newMap = { ...prev };
+  //         delete newMap[entity.entityInfo.code];
+  //         return newMap;
+  //       });
+  //     }, 3000);
+  //   } catch (error) {
+  //     console.error('保存AI创建的实体失败:', error);
+  //     message.error('保存AI创建的实体失败');
+  //   }
+  // };
 
   // 处理手工新建实体
   const handleManualCreateEntity = () => {
@@ -563,22 +563,22 @@ const ModelDesigner: React.FC = () => {
         }
       }
 
-      // 直接调用AI模型（简化版本，实际项目中需要根据具体的AI模型配置）
-      message.info('正在调用AI生成实体...');
-      
-      // 根据用户输入生成模拟响应（实际项目中需要替换为真实的AI调用）
-      const mockResponse: EntityFormValues = {
-        code: values.prompt.includes('用户') ? "user:management" : "entity:new",
-        label: values.prompt.includes('用户') ? "用户管理" : "新实体",
-        description: `基于用户需求"${values.prompt}"生成的实体模型`,
-        status: "enabled" as const,
-        tags: values.prompt.includes('用户') ? ["用户", "管理", "权限"] : ["实体", "新建"]
-      };
+      // 构建完整的AI提示词
+      const fullPrompt = `请帮我创建一个或多个新的实体模型。以下是需求描述：
 
-      // 使用模拟数据创建实体
-      await handleSaveEntity(mockResponse);
+${values.prompt}
+
+注意：
+1. 在本体系中 表 和 实体 是同一个概念
+2. 在本体系中 字段 和 列 是同一个概念
+3. 请基于需求描述展开设计，不要遗漏任何需求，并确保设计结果符合本体系的设计规范
+`.replace(/\n/g, '\n\n');
+
+      // 通过事件总线发送消息到AI Chat
+      console.log('🚀 通过事件总线发送消息到AI Chat:', fullPrompt);
+      eventBus.emit(EVENTS.SEND_MESSAGE_TO_AI_CHAT, fullPrompt);
       
-      message.success('AI创建的实体已保存');
+      // message.success('已发送到AI Chat，请查看右侧AI助手回复');
       
       // 关闭模态框
       setIsCreateModalVisible(false);
@@ -726,7 +726,7 @@ const ModelDesigner: React.FC = () => {
         setEditingEntity(null);
         createForm.resetFields();
         
-        message.success('实体创建成功');
+        message.success('Entity created successfully');
         
         // 3秒后清除闪烁效果
         setTimeout(() => {
@@ -739,7 +739,7 @@ const ModelDesigner: React.FC = () => {
       }
     } catch (error) {
       console.error('保存实体失败:', error);
-      message.error('保存实体失败');
+      message.error('Save entity failed');
     }
   };
 
@@ -774,7 +774,7 @@ const ModelDesigner: React.FC = () => {
     // 添加到AI聊天上下文
     projectStore.addAIChatContext(entityContext);
 
-    message.success(`已添加实体 "${entity.name}" 到AI聊天上下文`);
+    // message.success(`已添加实体 "${entity.name}" 到AI聊天上下文`);
   };
 
   useEffect(() => {
@@ -839,7 +839,7 @@ const ModelDesigner: React.FC = () => {
             }
           }
           
-          console.log('🔍 生成重新加载的实体树形数据');
+          // console.log('🔍 生成重新加载的实体树形数据');
           generateEntityTreeData(updatedProject);
         }
       }
@@ -853,7 +853,7 @@ const ModelDesigner: React.FC = () => {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
-        <div style={{ marginTop: 16 }}>加载项目中...</div>
+        <div style={{ marginTop: 16 }}>Loading project data...</div>
       </div>
     );
   }
@@ -905,7 +905,7 @@ const ModelDesigner: React.FC = () => {
                   size="small"
                   style={{ marginRight: 10 }}
                 >
-                  实体
+                  Entities
                 </Button>
 
                 <Button 
@@ -914,7 +914,7 @@ const ModelDesigner: React.FC = () => {
                   onClick={handleViewGraph}
                   size="small"
                 >
-                  关系
+                  Relations
                 </Button>
                 <Button 
                   icon={<DatabaseOutlined />}
@@ -922,7 +922,7 @@ const ModelDesigner: React.FC = () => {
                   onClick={handleEnumManage}
                   size="small"
                 >
-                  枚举
+                  Enums
                 </Button>
             </Space>
             
@@ -1028,29 +1028,35 @@ const ModelDesigner: React.FC = () => {
           {selectedEntity ? (
             <FieldsManager entity={selectedEntity} project={project!} onEntityUpdate={handleProjectUpdate} onProjectUpdate={handleProjectUpdate} />
           ) : (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* 字段管理头部（无选中实体时显示） */}
-              {/* <Space style={{ 
-                height: 40,
-                padding: '0 20px',
-                backgroundColor: '#1f1f1f'
-              }}>
-                <Text type="secondary">请选择一个实体查看字段信息</Text>
-              </Space> */}
-              
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>              
               {/* 字段列表内容区域 */}
               <div style={{ 
                 flex: 1, 
                 flexDirection: 'column',
                 overflow: 'auto', 
-                padding: '16px',
-                backgroundColor: '#141414',
+                // padding: '16px',
+                backgroundColor: '#262B32',
+                // backgroundImage: 'linear-gradient(313deg, #0000008f 60%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                // justifyContent: 'center',
+                justifyContent: 'flex-end',
+                borderRadius: '10px',
+                margin: '10px'
               }}>
-                <img src="/toleft.svg" style={{ height: 68, marginBottom: 40 }} />
-                <Text type="secondary">请选择一个实体查看字段信息</Text>
+                {/* <img src="/wawa1.png" style={{ height: 200, marginBottom: 40 }} /> */}
+                <Text color='white' style={{ marginBottom: 80, fontSize: 16 }}>Please select an entity first.</Text>
+                <video
+                  src="/wawa-dance2.mp4"
+                  style={{ width: '100%', height: 'auto' }}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls={false}
+                  preload="auto"
+                />
+                
               </div>
             </div>
           )}
@@ -1188,12 +1194,12 @@ const ModelDesigner: React.FC = () => {
       />
 
       {/* AI新建实体模态框 */}
-      <AIAddNewEntities
+      {/* <AIAddNewEntities
         visible={isAICreateModalVisible}
         onClose={() => setIsAICreateModalVisible(false)}
         project={project!}
         onEntityCreated={handleAIEntityCreated}
-      />
+      /> */}
     </div>
   );
 };

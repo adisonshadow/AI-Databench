@@ -30,21 +30,21 @@
 /* 聊天消息容器样式 */
 .chat-messages {
   padding: 16px;
-  background-color: #1f1f1f;
+  /* background-color: #1f1f1f; */
 }
 
 /* 聊天输入容器样式 */
 .chat-input-container {
   padding: 16px;
-  border-top: 1px solid #303030;
-  background-color: #262626;
+  /* border-top: 1px solid #303030; */
+  /* background-color: #262626; */
 }
 
 /* 头部样式 */
 .chat-header {
   padding: 16px;
   border-bottom: 1px solid #303030;
-  background-color: #262626;
+  background-color: #141414;
 }
 
 /* 用户消息样式 */

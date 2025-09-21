@@ -609,7 +609,7 @@ const ADBEnumManager: React.FC<ADBEnumManagerProps> = ({
             dataSource={viewMode === 'list' ? filteredEnums : treeData}
             loading={loading}
             pagination={false}
-            rowKey={viewMode === 'list' ? "id" : "value"}
+            rowKey={viewMode === 'list' ? (record) => record.enumInfo?.id || record.enumInfo?.code || 'unknown' : "value"}
             size="small"
             style={{ flex: 1 }}
             expandable={viewMode === 'tree' ? {

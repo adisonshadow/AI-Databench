@@ -23,6 +23,7 @@ import type {
 import { RelationType } from '@/types/storage';
 import { RelationUtils } from '@/utils/relationUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { eventBus, EVENTS } from '@/utils/eventBus';
 
 // 导入新创建的组件
 import FieldList from './FieldList';
@@ -171,7 +172,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setRelationValidationResult(validation);
 
       if (!validation.isValid) {
-        message.error('关系验证失败，请检查配置');
+        message.error('Relation validation failed, please check the configuration');
         return;
       }
 
@@ -185,7 +186,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setRelationConflicts(relationConflicts);
 
       if (relationConflicts.length > 0) {
-        message.warning('检测到关系冲突，请检查配置');
+        message.warning('Detected relation conflicts, please check the configuration');
         return;
       }
 
@@ -214,7 +215,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setEditingRelationInFields(null);
       setRelationValidationResult(null);
       setRelationConflicts([]);
-      message.success(editingRelationInFields ? '关系更新成功' : '关系创建成功');
+      message.success(editingRelationInFields ? 'Relation updated successfully' : 'Relation created successfully');
       
       // 3秒后清除闪烁效果
       setTimeout(() => {
@@ -227,7 +228,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       
     } catch (error) {
       console.error('保存关系失败:', error);
-      message.error('保存关系失败');
+      message.error('Save relation failed');
     }
   };
 
@@ -353,7 +354,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setIsModalVisible(false);
       setEditingField(null);
       
-      message.success(`字段${editingField ? '更新' : '创建'}成功`);
+      message.success(`Field ${editingField ? 'updated' : 'created'} successfully`);
       
       // 3秒后清除闪烁效果
       setTimeout(() => {
@@ -365,7 +366,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       }, 3000);
     } catch (error) {
       console.error('保存字段失败:', error);
-      message.error('保存字段失败');
+      message.error('Field save failed');
     }
   };
 
@@ -687,7 +688,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
       setIsIndexEditModalVisible(false);
       setEditingIndex(null);
       
-      message.success(`索引${editingIndex ? '更新' : '创建'}成功`);
+      message.success(`Index ${editingIndex ? 'updated' : 'created'} successfully`);
       
       // 3秒后清除闪烁效果
       setTimeout(() => {
@@ -698,8 +699,8 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         });
       }, 3000);
     } catch (error) {
-      console.error('保存索引失败:', error);
-      message.error('保存索引失败');
+      console.error('Save index failed:', error);
+      message.error('Save index failed');
     }
   };
 
@@ -720,7 +721,101 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
     };
     projectStore.addAIChatContext(fieldContext);
 
-    message.success(`已添加字段 "${field.columnInfo.code}" 到AI聊天上下文`);
+    // message.success(`已添加字段 "${field.columnInfo.code}" 到AI聊天上下文`);
+  };
+
+  // 处理AI生成索引
+  const handleAIGenerateIndexes = () => {
+    try {
+      // 先添加实体到AI Chat上下文
+      const entityContext: AIChatContext = {
+        id: uuidv4(),
+        type: 'entity',
+        entityCode: entity.entityInfo.code,
+        entityName: entity.entityInfo.label || entity.entityInfo.code,
+        description: `${entity.entityInfo.label || entity.entityInfo.code}(${entity.entityInfo.code})`
+      };
+      projectStore.addAIChatContext(entityContext);
+
+      // 构建固定的AI提示词
+      const fullPrompt = `请帮我为实体"${entity.entityInfo.label}"自动创建和补齐索引。
+
+请分析当前实体的字段结构，自动为以下情况创建合适的索引：
+1. 主键字段（如果存在）
+2. 外键字段（如果存在）
+3. 唯一字段（如果存在）
+4. 经常用于查询的字段（如姓名、邮箱、手机号等）
+5. 时间字段（如创建时间、更新时间等）
+6. 状态字段（如状态、类型等）
+
+请根据字段的特点和业务逻辑，创建合适的索引类型：
+- 普通索引：用于提高查询性能
+- 唯一索引：用于保证数据唯一性
+- 复合索引：用于多字段组合查询
+
+注意：
+1. 在本体系中 表 和 实体 是同一个概念
+2. 在本体系中 字段 和 列 是同一个概念
+3. 请基于实体结构展开设计，不要遗漏任何需求，并确保设计结果符合本体系的设计规范
+4. 请考虑索引的命名规范和性能优化
+`.replace(/\n/g, '\n\n');
+
+      // 通过事件总线发送消息到AI Chat
+      console.log('🚀 通过事件总线发送AI生成索引消息到AI Chat:', fullPrompt);
+      eventBus.emit(EVENTS.SEND_MESSAGE_TO_AI_CHAT, fullPrompt);
+      
+      message.success('已发送AI生成索引请求到AI Chat，请查看右侧AI助手回复');
+      
+    } catch (error) {
+      console.error('AI生成索引失败:', error);
+      message.error('AI生成索引失败');
+    }
+  };
+
+  // 处理AI生成关系
+  const handleAIGenerateRelations = () => {
+    try {
+      // 先添加实体到AI Chat上下文
+      const entityContext: AIChatContext = {
+        id: uuidv4(),
+        type: 'entity',
+        entityCode: entity.entityInfo.code,
+        entityName: entity.entityInfo.label || entity.entityInfo.code,
+        description: `${entity.entityInfo.label || entity.entityInfo.code}(${entity.entityInfo.code})`
+      };
+      projectStore.addAIChatContext(entityContext);
+
+      // 构建固定的AI提示词
+      const fullPrompt = `请帮我为实体"${entity.entityInfo.label}"自动创建和补齐关系。
+
+请分析当前实体的字段结构和业务逻辑，自动创建合适的关系：
+1. 一对一关系：如用户与用户资料、订单与订单详情等
+2. 一对多关系：如用户与订单、部门与员工、分类与商品等
+3. 多对多关系：如用户与角色、学生与课程、商品与标签等
+
+请根据字段的特点和业务逻辑，创建合适的关系类型：
+- 外键关系：通过外键字段建立的关系
+- 关联表关系：通过中间表建立的多对多关系
+- 级联关系：设置合适的级联操作（删除、更新等）
+
+注意：
+1. 在本体系中 表 和 实体 是同一个概念
+2. 在本体系中 字段 和 列 是同一个概念
+3. 请基于实体结构展开设计，不要遗漏任何需求，并确保设计结果符合本体系的设计规范
+4. 请考虑关系的命名规范和业务逻辑
+5. 请分析项目中其他实体的结构，建立合理的关系网络
+`.replace(/\n/g, '\n\n');
+
+      // 通过事件总线发送消息到AI Chat
+      console.log('🚀 通过事件总线发送AI生成关系消息到AI Chat:', fullPrompt);
+      eventBus.emit(EVENTS.SEND_MESSAGE_TO_AI_CHAT, fullPrompt);
+      
+      // message.success('已发送AI生成关系请求到AI Chat，请查看右侧AI助手回复');
+      
+    } catch (error) {
+      console.error('AI生成关系失败:', error);
+      message.error('Failed to generate relations');
+    }
   };
 
   return (
@@ -737,9 +832,9 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
           {/* 使用Segmented组件替换原来的表名显示 */}
           <Segmented
             options={[
-              { label: '字段', value: 'fields' },
-              { label: '索引', value: 'indexes' },
-              { label: '关系', value: 'relations' }
+              { label: 'Fields', value: 'fields' },
+              { label: 'Indexes', value: 'indexes' },
+              { label: 'Relations', value: 'relations' }
             ]}
             size="small"
             value={activeTab}
@@ -755,28 +850,48 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
               onClick={handleCreateField}
               size="small"
             >
-              字段
+              New
             </Button>
           )}
           {activeTab === 'relations' && (
-            <Button 
-              type="text" 
-              icon={<PlusOutlined />}
-              onClick={handleCreateRelation}
-              size="small"
-            >
-              关系
-            </Button>
+            <>
+              <Button 
+                className='btn-ai'
+                size="small"
+                onClick={handleAIGenerateRelations}
+                style={{ marginRight: 8 }}
+              >
+                Auto Generate
+              </Button>
+              <Button 
+                type="text" 
+                icon={<PlusOutlined />}
+                onClick={handleCreateRelation}
+                size="small"
+              >
+                New
+              </Button>
+            </>
           )}
           {activeTab === 'indexes' && (
-            <Button 
-              type="text" 
-              icon={<PlusOutlined />}
-              onClick={handleCreateIndex}
-              size="small"
-            >
-              索引
-            </Button>
+            <>
+              <Button 
+                className='btn-ai' 
+                size="small"
+                onClick={handleAIGenerateIndexes}
+                style={{ marginRight: 8 }}
+              >
+                Auto Create
+              </Button>
+              <Button 
+                type="text" 
+                icon={<PlusOutlined />}
+                onClick={handleCreateIndex}
+                size="small"
+              >
+                New
+              </Button>
+            </>
           )}
         </Space>
       </Space>
@@ -837,6 +952,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         handleEnumSelect={handleEnumSelect}
         handleEnumClear={handleEnumClear}
         onFinish={handleSaveField}
+        defaultActiveTab={editingField ? 'manual' : 'ai'}
         onCancel={() => {
           setIsModalVisible(false);
           setEditingField(null);
@@ -853,7 +969,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
 
       {/* 关系管理模态框 */}
       <Modal
-        title="关系管理"
+        title="Relation Management"
         open={isRelationModalVisible}
         onCancel={() => setIsRelationModalVisible(false)}
         footer={null}
@@ -884,7 +1000,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
             handleEnumSelect(enumCode);
             setIsEnumSelectModalVisible(false);
           } else {
-            message.warning("请选择一个枚举");
+            message.warning("Please select an enum");
           }
         }}
         project={project}
@@ -916,6 +1032,7 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
         conflicts={relationConflicts}
         entities={entities}
         onFinish={handleSaveRelation}
+        defaultActiveTab={editingRelationInFields ? 'manual' : 'ai'}
         onCancel={() => {
           setIsRelationCreateModalVisible(false);
           setEditingRelationInFields(null);
@@ -934,9 +1051,12 @@ const FieldsManager: React.FC<FieldsManagerProps> = ({ entity, project, onEntity
           setEditingIndex(null);
         }}
         onOk={handleSaveIndex}
+        defaultActiveTab={editingIndex ? 'manual' : 'ai'}
         editingIndex={editingIndex}
         availableFields={availableFields}
         currentIndexes={indexes} // 传递当前索引列表
+        project={project}
+        entity={entity}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Button, 
   Space, 
@@ -41,7 +41,7 @@ interface ChatMessage {
   badges?: Array<{
     type: 'success' | 'warning' | 'error' | 'info';
     text: string;
-    color: string;
+    color?: string;
     icon?: string;
   }>;
   operationData?: unknown;
@@ -76,6 +76,8 @@ interface AIChatInterfaceProps {
   className?: string;
   style?: React.CSSProperties;
   onProjectUpdate?: (project: Project) => void;
+  externalMessage?: string; // 外部传入的消息
+  onExternalMessageSent?: () => void; // 外部消息发送完成回调
 }
 
 // 创建真实AI发送器
@@ -116,7 +118,9 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   visible = true,
   className,
   style,
-  onProjectUpdate
+  onProjectUpdate,
+  externalMessage,
+  onExternalMessageSent
 }) => {
   const [selectedModel, setSelectedModel] = useState<AIModelConfig | null>(null);
   const [aiIntegration] = useState(() => new AIAssistantIntegration());
@@ -134,7 +138,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
     badges: Array<{
       type: 'success' | 'warning' | 'error' | 'info';
       text: string;
-      color: string;
+      color?: string;
       icon?: string;
     }>;
   } | null>(null);
@@ -183,6 +187,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       unsubscribe();
     };
   }, []);
+
 
   // 监听AI聊天上下文变化
   useEffect(() => {
@@ -957,7 +962,9 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
           description?: string; 
           comment?: string; 
         }; 
-        fields: Record<string, unknown> 
+        fields: Record<string, unknown>;
+        indexes?: Record<string, unknown>;
+        relations?: Record<string, unknown>;
       };
       
       if (!targetEntity) {
@@ -1025,6 +1032,60 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
               field.typeormConfig.comment = fieldData.comment;
             }
             
+            // 处理字段中的索引 (兼容indexes/indexe拼写错误)
+            const fieldIndexes = (fieldData.indexes || fieldData.indexe || []);
+            const normalizedIndexes = Array.isArray(fieldIndexes) 
+              ? fieldIndexes 
+              : [fieldIndexes];
+            
+            if (normalizedIndexes.length > 0) {
+              console.log(`🔍 [DEBUG] 处理字段索引: ${fieldCode}`, normalizedIndexes);
+              
+              // 确保实体有indexes数组
+              if (!targetEntity.indexes) {
+                targetEntity.indexes = [];
+              } else if (!Array.isArray(targetEntity.indexes)) {
+                targetEntity.indexes = Object.values(targetEntity.indexes);
+              }
+              
+              // 处理每个索引定义
+              for (const indexDef of normalizedIndexes) {
+                if (!indexDef || typeof indexDef !== 'object') continue;
+                
+                // 兼容不同格式的索引定义
+                const indexName = indexDef.name || 
+                                 (indexDef.type === 'primary' ? `PK_${targetEntity.entityInfo.tableName}_${fieldCode}` : 
+                                 `IDX_${targetEntity.entityInfo.tableName}_${fieldCode}`);
+                
+                const indexFields = indexDef.columns || indexDef.fields || [fieldCode];
+                const isUnique = indexDef.type === 'unique' || indexDef.unique;
+                
+                // 查找是否已存在同名索引
+                const existingIndex = targetEntity.indexes.find(
+                  idx => idx.name === indexName
+                );
+                
+                if (!existingIndex) {
+                  const { v4: uuidv4 } = await import('uuid');
+                  targetEntity.indexes.push({
+                    id: uuidv4(),
+                    name: indexName,
+                    fields: indexFields,
+                    unique: isUnique,
+                    type: indexDef.type || 'btree',
+                    comment: indexDef.comment || '',
+                    createdAt: now,
+                    updatedAt: now
+                  });
+                  
+                  console.log(`🔍 添加字段索引: ${indexName}`, {
+                    fields: indexFields,
+                    unique: isUnique
+                  });
+                }
+              }
+            }
+            
             console.log(`🔍 更新字段: ${fieldCode}`);
           } else {
             // 添加新字段
@@ -1062,10 +1123,293 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         targetEntity.fields = updatedFields;
       }
       
+      // 处理索引更新
+      console.log('🔍 [DEBUG] 原始索引数据:', {
+        indices: data.indices,
+        compositeIndexes: data.compositeIndexes,
+        fields: data.fields?.map(f => ({
+          code: f.code,
+          index: f.index,
+          isUnique: f.isUnique
+        }))
+      });
+      
+      if (data.indices || data.compositeIndexes) {
+        console.log('🔍 [DEBUG] 开始处理索引更新');
+        
+        // 检查字段中的索引标记
+        const indexedFields = data.fields?.filter(f => f.index || f.isUnique);
+        if (indexedFields?.length) {
+          console.log('🔍 [DEBUG] 字段中定义的索引:', indexedFields);
+        }
+        
+        // 确保indexes属性存在并且是数组
+        if (!targetEntity.indexes) {
+          targetEntity.indexes = [];
+        } else if (!Array.isArray(targetEntity.indexes)) {
+          // 如果indexes是对象，将其转换为数组
+          targetEntity.indexes = Object.values(targetEntity.indexes);
+        }
+        
+        // 创建索引数组的副本
+        const updatedIndexes = [...targetEntity.indexes];
+        
+        // 处理普通索引 (indices)
+        if (data.indices) {
+          const indicesArray = Array.isArray(data.indices) 
+            ? data.indices 
+            : Object.values(data.indices || {});
+            
+          for (const indexData of indicesArray) {
+            if (!indexData || typeof indexData !== 'object') continue;
+            
+            const indexName = indexData.name || `IDX_${indexData.field || indexData.columns?.[0]}`;
+            if (!indexName) continue;
+            
+            // 查找现有索引
+            const existingIndexIndex = updatedIndexes.findIndex((index) => 
+              index.name === indexName
+            );
+            
+            if (existingIndexIndex >= 0) {
+              // 更新现有索引
+              const index = updatedIndexes[existingIndexIndex];
+              
+              if (indexData.columns && Array.isArray(indexData.columns)) {
+                index.fields = indexData.columns;
+              } else if (indexData.field) {
+                index.fields = [indexData.field];
+              }
+              
+              if (typeof indexData.unique === 'boolean') {
+                index.unique = indexData.unique;
+              }
+              if (indexData.comment && typeof indexData.comment === 'string') {
+                index.comment = indexData.comment;
+              }
+              if (indexData.type && typeof indexData.type === 'string') {
+                index.type = indexData.type;
+              }
+              
+              console.log(`🔍 更新索引: ${indexName}`, index);
+            } else {
+              // 添加新索引
+              const { v4: uuidv4 } = await import('uuid');
+              const indexId = uuidv4();
+              
+              // 将新索引添加到数组中
+              updatedIndexes.push({
+                id: indexId,
+                name: indexName,
+                fields: (indexData.columns || (indexData.field ? [indexData.field] : [])) as string[],
+                unique: (indexData.unique as boolean) || false,
+                comment: (indexData.comment as string) || '',
+                type: (indexData.type as string) || 'btree',
+                createdAt: now,
+                updatedAt: now
+              });
+              
+              console.log(`🔍 添加新索引: ${indexName}`, updatedIndexes[updatedIndexes.length - 1]);
+            }
+          }
+        }
+        
+        // 处理复合索引 (compositeIndexes)
+        if (data.compositeIndexes && Array.isArray(data.compositeIndexes)) {
+          console.log('🔍 [DEBUG] 开始处理复合索引，数量:', data.compositeIndexes.length);
+          for (const compositeIndex of data.compositeIndexes) {
+            console.log('🔍 [DEBUG] 处理复合索引:', compositeIndex);
+            if (!compositeIndex || typeof compositeIndex !== 'object') continue;
+            
+            const indexName = compositeIndex.name || 
+              `IDX_${compositeIndex.columns.join('_')}`;
+            if (!indexName) continue;
+            
+            // 查找现有索引
+            const existingIndexIndex = updatedIndexes.findIndex((index) => 
+              index.name === indexName
+            );
+            
+            if (existingIndexIndex >= 0) {
+              // 更新现有索引
+              const index = updatedIndexes[existingIndexIndex];
+              index.fields = compositeIndex.columns;
+              index.unique = compositeIndex.isUnique || false;
+              
+              console.log(`🔍 更新复合索引: ${indexName}`, index);
+            } else {
+              // 添加新索引
+              const { v4: uuidv4 } = await import('uuid');
+              const indexId = uuidv4();
+              
+              updatedIndexes.push({
+                id: indexId,
+                name: indexName,
+                fields: compositeIndex.columns,
+                unique: compositeIndex.isUnique || false,
+                comment: compositeIndex.comment || '',
+                type: compositeIndex.type || 'btree',
+                createdAt: now,
+                updatedAt: now
+              });
+              
+              console.log(`🔍 添加复合索引: ${indexName}`, updatedIndexes[updatedIndexes.length - 1]);
+            }
+          }
+        }
+        
+        // 将更新后的索引数组赋值给实体
+        targetEntity.indexes = updatedIndexes;
+        
+        // 调试日志 - 打印更新后的索引
+        console.log('🔍 [DEBUG] 最终索引列表:', {
+          count: updatedIndexes.length,
+          indexes: updatedIndexes.map(i => ({
+            name: i.name,
+            fields: i.fields,
+            unique: i.unique
+          }))
+        });
+        console.log('🔍 [DEBUG] 实体数据快照:', {
+          id: targetEntity.entityInfo.id,
+          code: targetEntity.entityInfo.code,
+          indexesCount: targetEntity.indexes?.length,
+          fieldsCount: Object.keys(targetEntity.fields).length
+        });
+      }
+      
+      // 处理关系更新
+      if (data.relations && Array.isArray(data.relations)) {
+        console.log('🔍 处理关系更新:', data.relations);
+        
+        // 确保relations属性存在
+        if (!targetEntity.relations) {
+          targetEntity.relations = {};
+        }
+        
+        const updatedRelations = { ...targetEntity.relations };
+        
+        for (const relationData of data.relations as Record<string, unknown>[]) {
+          if (!relationData || typeof relationData !== 'object') continue;
+          
+          const relationName = relationData.name as string;
+          if (!relationName) continue;
+          
+          // 查找现有关系
+          const existingRelation = Object.values(updatedRelations).find((relation: unknown) => {
+            const relationInfo = (relation as { name: string }).name;
+            return relationInfo === relationName;
+          });
+          
+          if (existingRelation) {
+            // 更新现有关系
+            const relation = existingRelation as { 
+              name: string; 
+              type: string; 
+              fromEntityId: string; 
+              toEntityId: string; 
+              inverseName?: string;
+              cascade?: boolean;
+              onDelete?: string;
+              onUpdate?: string;
+              nullable?: boolean;
+              eager?: boolean;
+              lazy?: boolean;
+              joinTableName?: string;
+              joinColumn?: string;
+              inverseJoinColumn?: string;
+              description?: string;
+            };
+            
+            if (relationData.type && typeof relationData.type === 'string') {
+              relation.type = relationData.type;
+            }
+            if (relationData.fromEntityId && typeof relationData.fromEntityId === 'string') {
+              relation.fromEntityId = relationData.fromEntityId;
+            }
+            if (relationData.toEntityId && typeof relationData.toEntityId === 'string') {
+              relation.toEntityId = relationData.toEntityId;
+            }
+            if (relationData.inverseName && typeof relationData.inverseName === 'string') {
+              relation.inverseName = relationData.inverseName;
+            }
+            if (typeof relationData.cascade === 'boolean') {
+              relation.cascade = relationData.cascade;
+            }
+            if (relationData.onDelete && typeof relationData.onDelete === 'string') {
+              relation.onDelete = relationData.onDelete;
+            }
+            if (relationData.onUpdate && typeof relationData.onUpdate === 'string') {
+              relation.onUpdate = relationData.onUpdate;
+            }
+            if (typeof relationData.nullable === 'boolean') {
+              relation.nullable = relationData.nullable;
+            }
+            if (typeof relationData.eager === 'boolean') {
+              relation.eager = relationData.eager;
+            }
+            if (typeof relationData.lazy === 'boolean') {
+              relation.lazy = relationData.lazy;
+            }
+            if (relationData.joinTableName && typeof relationData.joinTableName === 'string') {
+              relation.joinTableName = relationData.joinTableName;
+            }
+            if (relationData.joinColumn && typeof relationData.joinColumn === 'string') {
+              relation.joinColumn = relationData.joinColumn;
+            }
+            if (relationData.inverseJoinColumn && typeof relationData.inverseJoinColumn === 'string') {
+              relation.inverseJoinColumn = relationData.inverseJoinColumn;
+            }
+            if (relationData.description && typeof relationData.description === 'string') {
+              relation.description = relationData.description;
+            }
+            
+            console.log(`🔍 更新关系: ${relationName}`);
+          } else {
+            // 添加新关系
+            const { v4: uuidv4 } = await import('uuid');
+            const relationId = uuidv4();
+            
+            updatedRelations[relationId] = {
+              id: relationId,
+              name: relationName,
+              type: (relationData.type as string) || 'oneToMany',
+              fromEntityId: (relationData.fromEntityId as string) || '',
+              toEntityId: (relationData.toEntityId as string) || '',
+              inverseName: (relationData.inverseName as string) || '',
+              cascade: (relationData.cascade as boolean) || false,
+              onDelete: (relationData.onDelete as string) || 'RESTRICT',
+              onUpdate: (relationData.onUpdate as string) || 'RESTRICT',
+              nullable: (relationData.nullable as boolean) || true,
+              eager: (relationData.eager as boolean) || false,
+              lazy: (relationData.lazy as boolean) || true,
+              joinTableName: (relationData.joinTableName as string) || '',
+              joinColumn: (relationData.joinColumn as string) || '',
+              inverseJoinColumn: (relationData.inverseJoinColumn as string) || '',
+              description: (relationData.description as string) || '',
+              createdAt: now,
+              updatedAt: now
+            };
+            
+            console.log(`🔍 添加新关系: ${relationName}`);
+          }
+        }
+        
+        targetEntity.relations = updatedRelations;
+      }
+      
       // 保存项目
       console.log('🔍 开始保存项目到localStorage');
       await StorageService.saveProject(projectData);
+      
+      // 调试日志 - 验证保存后的数据
+      const savedProject = StorageService.getProject(projectData.id);
+      console.log('🔍 保存后的项目数据:', JSON.stringify(savedProject, null, 2));
       console.log('🔍 项目保存完成');
+      
+      // 强制刷新UI
+      projectStore.notifyUpdate();
+      setTimeout(() => projectStore.notifyUpdate(), 100);
       
       // 通知项目更新
       if (onProjectUpdate) {
@@ -1079,10 +1423,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       projectStore.notifyUpdate();
       console.log('🔍 projectStore通知触发完成');
       
-      console.log('✅ 字段创建成功');
+      console.log('✅ 实体更新成功');
       
     } catch (error) {
-      console.error('❌ 创建字段失败:', error);
+      console.error('❌ 实体更新失败:', error);
       throw error;
     }
   };
@@ -1110,7 +1454,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   };
 
   // 发送聊天消息
-  const sendChatMessage = async () => {
+  const sendChatMessage = useCallback(async () => {
     if (!inputMessage.trim() || !selectedModel) return;
     
     console.log('当前选中的模型配置:', selectedModel);
@@ -1355,7 +1699,32 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       setIsLoading(false);
       console.log('🏁 AI聊天请求处理完成');
     }
-  };
+  }, [inputMessage, selectedModel, messages, aiIntegration, aiChatContexts]);
+
+  // 处理外部消息
+  useEffect(() => {
+    if (externalMessage && externalMessage.trim()) {
+      console.log('🔔 收到外部消息:', externalMessage);
+      console.log('🔔 当前selectedModel:', selectedModel);
+      console.log('🔔 当前inputMessage:', inputMessage);
+      
+      setInputMessage(externalMessage);
+      
+      // 延迟发送消息，确保inputMessage已更新
+      setTimeout(() => {
+        console.log('🔔 准备发送外部消息到AI Chat');
+        console.log('🔔 发送前的inputMessage:', externalMessage);
+        console.log('🔔 发送前的selectedModel:', selectedModel);
+        
+        sendChatMessage();
+        
+        // 通知外部消息已发送
+        if (onExternalMessageSent) {
+          onExternalMessageSent();
+        }
+      }, 100);
+    }
+  }, [externalMessage, sendChatMessage, onExternalMessageSent]);
 
   // 清空聊天记录
   const clearChat = () => {
@@ -1412,7 +1781,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#1f1f1f',
+        // backgroundColor: '#1f1f1f',
         borderLeft: '1px solid #303030',
         ...style
       }}
@@ -1421,7 +1790,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       <div className="chat-header" style={{
         padding: '4px 10px',
         borderBottom: '1px solid #303030',
-        backgroundColor: '#262626'
+        // backgroundColor: '#262626'
       }}>
         <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
           <Space align="center">

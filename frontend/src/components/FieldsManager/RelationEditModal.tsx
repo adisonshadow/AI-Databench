@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, Switch, Row, Col, Divider, Alert, Typography } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Modal, Form, Input, Select, Switch, Row, Col, Divider, Alert, Typography, Tabs } from 'antd';
 import type { Relation, Project, RelationValidationResult, RelationConflict, ADBEntity } from '@/types/storage';
 import { RelationType, CascadeType } from '@/types/storage';
 import { RelationUtils } from '@/utils/relationUtils';
 import { StorageService } from '@/stores/storage';
+import { eventBus, EVENTS } from '@/utils/eventBus';
+import { v4 as uuidv4 } from 'uuid';
+import { projectStore } from '@/stores/projectStore';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -39,6 +42,7 @@ interface RelationEditModalProps {
   onCancel: () => void;
   setValidationResult: React.Dispatch<React.SetStateAction<RelationValidationResult | null>>;
   setConflicts: React.Dispatch<React.SetStateAction<RelationConflict[]>>;
+  defaultActiveTab?: string; // 默认激活的Tab
 }
 
 const RelationEditModal: React.FC<RelationEditModalProps> = ({
@@ -53,8 +57,50 @@ const RelationEditModal: React.FC<RelationEditModalProps> = ({
   onFinish,
   onCancel,
   setValidationResult,
-  setConflicts
+  setConflicts,
+  defaultActiveTab = 'ai',
 }) => {
+  const [activeTab, setActiveTab] = useState<string>(defaultActiveTab);
+  const [aiForm] = Form.useForm();
+  
+  // 处理AI创建关系
+  const handleAICreateRelation = async (values: { prompt: string }) => {
+    try {
+      // 先添加实体到AI Chat上下文
+      if (entity) {
+        const entityContext = {
+          id: uuidv4(),
+          type: 'entity' as const,
+          entityCode: entity.entityInfo.code,
+          entityName: entity.entityInfo.label || entity.entityInfo.code,
+          description: `${entity.entityInfo.label || entity.entityInfo.code}(${entity.entityInfo.code})`
+        };
+        projectStore.addAIChatContext(entityContext);
+      }
+
+      // 构建完整的AI提示词
+      const fullPrompt = `请帮我为实体"${entity.entityInfo.label}"创建与其他实体的关系。以下是需求描述：
+
+${values.prompt}
+
+注意：
+1. 在本体系中 表 和 实体 是同一个概念
+2. 在本体系中 字段 和 列 是同一个概念
+3. 请基于需求描述展开设计，不要遗漏任何需求，并确保设计结果符合本体系的设计规范
+4. 请考虑关系类型（一对一、一对多、多对多等）和级联操作
+`.replace(/\n/g, '\n\n');
+
+      // 通过事件总线发送消息到AI Chat
+      console.log('🚀 通过事件总线发送关系创建消息到AI Chat:', fullPrompt);
+      eventBus.emit(EVENTS.SEND_MESSAGE_TO_AI_CHAT, fullPrompt);
+      
+      // 关闭模态框
+      onCancel();
+      
+    } catch (error) {
+      console.error('AI创建关系失败:', error);
+    }
+  };
   // 获取关系类型颜色
   const getRelationTypeColor = (type: RelationType): string => {
     const colors = {
@@ -226,7 +272,13 @@ const RelationEditModal: React.FC<RelationEditModalProps> = ({
     <Modal
       title={editingRelation ? "编辑关系" : "新建关系"}
       open={visible}
-      onOk={() => form.submit()}
+      onOk={() => {
+        if (activeTab === 'ai') {
+          aiForm.submit();
+        } else {
+          form.submit();
+        }
+      }}
       onCancel={onCancel}
       width={800}
       okText="保存"
@@ -234,20 +286,51 @@ const RelationEditModal: React.FC<RelationEditModalProps> = ({
       maskClosable={false}
       destroyOnHidden
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-        initialValues={{
-          cascade: false,
-          onDelete: CascadeType.RESTRICT,
-          onUpdate: CascadeType.RESTRICT,
-          nullable: true,
-          eager: false,
-          lazy: true,
-        }}
-        style={{ paddingTop: 30 }}
-      >
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'ai',
+            label: 'AI',
+            children: (
+              <Form
+                form={aiForm}
+                onFinish={handleAICreateRelation}
+                layout="vertical"
+                preserve={true}
+              >
+                <Form.Item
+                  name="prompt"
+                  label="关系需求描述"
+                  rules={[{ required: true, message: '请输入关系创建的需求描述' }]}
+                >
+                  <Input.TextArea 
+                    rows={6} 
+                    placeholder="例如：员工实体与部门实体是一对多关系，员工实体与角色实体是多对多关系"
+                  />
+                </Form.Item>
+              </Form>
+            )
+          },
+          {
+            key: 'manual',
+            label: '手工',
+            children: (
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={onFinish}
+                initialValues={{
+                  cascade: false,
+                  onDelete: CascadeType.RESTRICT,
+                  onUpdate: CascadeType.RESTRICT,
+                  nullable: true,
+                  eager: false,
+                  lazy: true,
+                }}
+                style={{ paddingTop: 30 }}
+              >
         {/* 基本信息 */}
         <Title level={5}>基本信息</Title>
         <Row gutter={16}>
@@ -482,7 +565,11 @@ const RelationEditModal: React.FC<RelationEditModalProps> = ({
 
         {/* 验证和冲突提示信息 */}
         {renderValidationAndConflictMessages()}
-      </Form>
+              </Form>
+            )
+          }
+        ]}
+      />
     </Modal>
   );
 };

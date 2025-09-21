@@ -252,11 +252,11 @@ body {
 
 
 .ai-model-select-dropdown {
-  min-width: 120px !important;
+  min-width: 130px !important;
 }
 
 .ai-select {
-  min-width: 120px !important;
+  min-width: 130px !important;
 }
 
 .ant-table-tbody >tr:last-child >td{
@@ -282,4 +282,22 @@ body {
 
 .updated-row {
   animation: flash-update .5s ease-in-out 6;
+}
+
+.btn-ai {
+  background: linear-gradient(256deg, #1862ff 15%, #7304e9);
+  color: #ffffff !important;
+  text-shadow: 0 0 black;
+}
+
+.btn-ai:hover {
+  background: linear-gradient(156deg, #1862ff 15%, #7304e9) !important;
+  box-shadow: 0 0 10px 0 rgba(63, 3, 153, 0.1);
+}
+
+.ant-tooltip {
+  --antd-arrow-background-color: rgb(89, 90, 93);
+}
+.ant-tooltip .ant-tooltip-inner {
+  background-color: rgb(89, 90, 93) !important;
 }

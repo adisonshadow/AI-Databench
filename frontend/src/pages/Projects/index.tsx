@@ -43,7 +43,7 @@ const Projects: React.FC = () => {
       setProjects(projectList);
     } catch (error) {
       console.error('Failed to load projects:', error);
-      message.error('加载项目列表失败');
+      message.error('Failed to load projects');
     }
   };
 
@@ -66,7 +66,7 @@ const Projects: React.FC = () => {
           updatedAt: now
         };
         StorageService.saveProject(updatedProject);
-        message.success('项目更新成功');
+        message.success('Project updated successfully');
       } else {
         // 创建新项目
         const newProject: Project = {
@@ -79,7 +79,7 @@ const Projects: React.FC = () => {
           config: {
             database: {
               id: 'default',
-              name: '默认数据库',
+              name: 'Default Database',
               type: 'mysql',
               connection: {
                 host: 'localhost',
@@ -121,7 +121,7 @@ const Projects: React.FC = () => {
         };
         
         StorageService.saveProject(newProject);
-        message.success('项目创建成功');
+        message.success('Project created successfully');
       }
       
       setModalVisible(false);
@@ -130,7 +130,7 @@ const Projects: React.FC = () => {
       loadProjects();
     } catch (error) {
       console.error('Failed to save project:', error);
-      message.error('保存项目失败');
+      message.error('Failed to save project');
     } finally {
       setLoading(false);
     }
@@ -140,11 +140,11 @@ const Projects: React.FC = () => {
   const handleDelete = async (project: Project) => {
     try {
       StorageService.deleteProject(project.id);
-      message.success('项目删除成功');
+      message.success('Project deleted successfully');
       loadProjects();
     } catch (error) {
       console.error('Failed to delete project:', error);
-      message.error('删除项目失败');
+      message.error('Failed to delete project');
     }
   };
 
@@ -190,27 +190,34 @@ const Projects: React.FC = () => {
   return (
     <div>
       {/* 页面头部 */}
-      <div style={{ marginBottom: 2, padding: 24 }}>
+      <div style={{ 
+          marginBottom: 2, 
+          padding: 24,
+          backgroundImage: 'url(/wawa3.png)',
+          backgroundSize: 'contain',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+         }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-              <img src="/logo.svg" alt="AIDatabench" style={{ height: '32px', marginRight: 20 }} />
+              {/* <img src="/logo.svg" alt="AIDatabench" style={{ height: '32px', marginRight: 20 }} /> */}
               <Title level={2} style={{ margin: 0 }}>
-                项目管理
+                AI Databench
               </Title>
             </div>
             <Text type="secondary">
-              管理您的AIDatabench项目，点击项目卡片进入ORM设计器
+              Easy to use AI-driven database design tool
             </Text>
           </div>
           <Button 
-            type="primary" 
-            ghost
+            // type="primary" 
+            // ghost
             icon={<PlusOutlined />}
             onClick={handleCreate}
             size="large"
           >
-            新建项目
+            Create New Project
           </Button>
         </div>
       </div>
@@ -219,10 +226,10 @@ const Projects: React.FC = () => {
       {projects.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="还没有项目呢"
+          description="No projects yet"
         >
           <Button type="primary" onClick={handleCreate}>
-            创建第一个项目
+            Start a new project
           </Button>
         </Empty>
       ) : (
@@ -241,21 +248,21 @@ const Projects: React.FC = () => {
                         icon={<FolderOpenOutlined />}
                         onClick={() => handleOpenProject(project)}
                       >
-                        打开
+                        Open
                       </Button>,
                       <Button 
                         type="text" 
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(project)}
                       >
-                        编辑
+                        Edit
                       </Button>,
                       <Popconfirm
-                        title="确定删除这个项目吗？"
-                        description="此操作不可恢复，请谨慎操作。"
+                        title="Are you sure you want to delete this project?"
+                        description="This action cannot be undone, please be careful."
                         onConfirm={() => handleDelete(project)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText="Delete"
+                        cancelText="Cancel"
                         okButtonProps={{ danger: true }}
                       >
                         <Button 
@@ -263,7 +270,7 @@ const Projects: React.FC = () => {
                           icon={<DeleteOutlined />}
                           // danger
                         >
-                          删除
+                          Delete
                         </Button>
                       </Popconfirm>
                     ]}
@@ -278,19 +285,19 @@ const Projects: React.FC = () => {
                         <div>
                           <div style={{ marginBottom: 8 }}>
                             <Text ellipsis={{ tooltip: project.description }}>
-                              {project.description || '暂无描述'}
+                              {project.description || 'No description'}
                             </Text>
                           </div>
                           <div style={{ marginBottom: 8 }}>
                             <Space>
-                              <Tag color="blue">{stats.entityCount} 个实体</Tag>
-                              <Tag color="green">{stats.relationCount} 个关系</Tag>
+                              <Tag color="blue">{stats.entityCount} entities</Tag>
+                              <Tag color="green">{stats.relationCount} relations</Tag>
                             </Space>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', color: '#999' }}>
                             <CalendarOutlined style={{ marginRight: 4 }} />
                             <Text type="secondary" style={{ fontSize: '12px' }}>
-                              更新于 {formatDate(project.updatedAt)}
+                              Updated at {formatDate(project.updatedAt)}
                             </Text>
                           </div>
                         </div>
@@ -306,7 +313,7 @@ const Projects: React.FC = () => {
 
       {/* 创建/编辑项目模态框 */}
       <Modal
-        title={editingProject ? '编辑项目' : '新建项目'}
+        title={editingProject ? 'Edit Project' : 'New Project'}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
@@ -327,24 +334,24 @@ const Projects: React.FC = () => {
         >
           <Form.Item
             name="name"
-            label="项目名称"
+            label="Project Name"
             rules={[
-              { required: true, message: '请输入项目名称' },
-              { max: 50, message: '项目名称不能超过50个字符' }
+              { required: true, message: 'Please enter project name' },
+              { max: 50, message: 'Project name cannot exceed 50 characters' }
             ]}
           >
-            <Input placeholder="请输入项目名称" />
+            <Input placeholder="Please enter project name" />
           </Form.Item>
           
           <Form.Item
             name="description"
-            label="项目描述"
+            label="Project Description"
             rules={[
-              { max: 200, message: '描述不能超过200个字符' }
+              { max: 200, message: 'Description cannot exceed 200 characters' }
             ]}
           >
             <Input.TextArea 
-              placeholder="请输入项目描述（可选）" 
+              placeholder="Please enter project description (optional)" 
               rows={4}
             />
           </Form.Item>
@@ -358,14 +365,14 @@ const Projects: React.FC = () => {
                   form.resetFields();
                 }}
               >
-                取消
+                Cancel
               </Button>
               <Button 
                 type="primary" 
                 htmlType="submit" 
                 loading={loading}
               >
-                {editingProject ? '更新' : '创建'}
+                {editingProject ? 'Update' : 'Create'}
               </Button>
             </Space>
           </Form.Item>

@@ -6,13 +6,13 @@ import {
   SettingOutlined,
   ApiOutlined,
   DatabaseOutlined,
-  LeftOutlined,
-  MessageOutlined
+  LeftOutlined
 } from '@ant-design/icons';
 import { StorageService } from '@/stores/storage';
 import type { Project } from '@/types/storage';
 import AISelector from '@/components/AISelector';
 import AIChatInterface from '@/components/AIAssistant/AIChatInterface';
+import { eventBus, EVENTS } from '@/utils/eventBus';
 // import { ResizableLayout, ResizablePanel, ResizableHandle } from '@/components/ResizableLayout';
 
 const { Content, Header } = AntLayout;
@@ -21,8 +21,8 @@ const LayoutContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [aiChatVisible, setAiChatVisible] = useState(true);
   const [projectUpdateKey, setProjectUpdateKey] = useState(0);
+  const [externalMessage, setExternalMessage] = useState<string>('');
   
   // 判断是否在ORM设计器页面
   const isDesignerPage = location.pathname.startsWith('/project/');
@@ -30,6 +30,20 @@ const LayoutContent: React.FC = () => {
   useEffect(() => {
     // 初始化localStorage
     StorageService.initialize();
+  }, []);
+
+  // 监听发送消息到AI Chat的事件
+  useEffect(() => {
+    const handleSendMessage = (message: string) => {
+      console.log('📨 Layout收到事件总线消息:', message);
+      sendMessageToAIChat(message);
+    };
+
+    eventBus.on(EVENTS.SEND_MESSAGE_TO_AI_CHAT, handleSendMessage);
+
+    return () => {
+      eventBus.off(EVENTS.SEND_MESSAGE_TO_AI_CHAT, handleSendMessage);
+    };
   }, []);
 
   useEffect(() => {
@@ -61,10 +75,6 @@ const LayoutContent: React.FC = () => {
     console.log('设置按钮被点击');
   };
 
-  // 处理AI聊天按钮点击
-  const handleAiChatClick = () => {
-    setAiChatVisible(!aiChatVisible);
-  };
 
   // 处理项目更新
   const handleProjectUpdate = (updatedProject: Project) => {
@@ -72,6 +82,17 @@ const LayoutContent: React.FC = () => {
     setCurrentProject(updatedProject);
     // 触发重新渲染，通知子组件项目已更新
     setProjectUpdateKey(prev => prev + 1);
+  };
+
+  // 发送外部消息到AI Chat
+  const sendMessageToAIChat = (message: string) => {
+    console.log('📤 Layout发送消息到AIChatInterface:', message);
+    setExternalMessage(message);
+  };
+
+  // 处理外部消息发送完成
+  const handleExternalMessageSent = () => {
+    setExternalMessage(''); // 清空消息
   };
   
   // 如果在项目管理页面，使用简单布局
@@ -112,10 +133,10 @@ const LayoutContent: React.FC = () => {
         }}>
           {/* 左侧 Logo */}
           <Space align="center" style={{ justifyContent: 'center' }}>
-            <Tooltip title="返回首页">
+            <Tooltip title="Back to Projects">
               <Button type="text" icon={<LeftOutlined />} onClick={() => navigate('/')} />
             </Tooltip>
-            <img src="/logo.svg" alt="AIDatabench" style={{ height: '32px' }} />
+            {/* <img src="/logo.svg" alt="AIDatabench" style={{ height: '32px' }} /> */}
             <Divider type="vertical" />
             <span style={{ color: '#fff', fontSize: '18px', fontWeight: 'bold' }}>{currentProject?.name || '项目名称'}</span>
           </Space>
@@ -136,7 +157,7 @@ const LayoutContent: React.FC = () => {
                 onClick={() => navigate(`/project/${projectId}`)}
                 className={`nav-menu-button ${currentTab === 'model' ? 'active' : ''}`}
               >
-                模型
+                Model Design
               </Button>
               <Button
                 type="text"
@@ -144,7 +165,7 @@ const LayoutContent: React.FC = () => {
                 onClick={() => navigate(`/project/${projectId}/migration`)}
                 className={`nav-menu-button ${currentTab === 'migration' ? 'active' : ''}`}
               >
-                物化
+                Migration
               </Button>
               <Button
                 type="text"
@@ -152,7 +173,7 @@ const LayoutContent: React.FC = () => {
                 onClick={() => navigate(`/project/${projectId}/api`)}
                 className={`nav-menu-button ${currentTab === 'api' ? 'active' : ''}`}
               >
-                服务
+                API Generation
               </Button>
               {/* AISelector 组件 */}
               <AISelector 
@@ -201,11 +222,10 @@ const LayoutContent: React.FC = () => {
             >
             {/* {aiChatVisible && ( */}
               <AIChatInterface 
-                // visible={aiChatVisible}
-                onClose={() => setAiChatVisible(false)}
-                // style={{ height: '100%', display: aiChatVisible?`flex`:`none` }}
                 style={{ height: '100%'}}
                 onProjectUpdate={handleProjectUpdate}
+                externalMessage={externalMessage}
+                onExternalMessageSent={handleExternalMessageSent}
               />
             {/* )} */}
           </Splitter.Panel>

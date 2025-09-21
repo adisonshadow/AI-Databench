@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -7,6 +7,7 @@ import {
   Switch,
   InputNumber,
   Button,
+  Tabs,
 } from "antd";
 import {
   getTypeORMNativeTypes,
@@ -22,6 +23,9 @@ import {
 //   supportsRelationConfig,
 } from "@/utils/fieldTypeConfig";
 import type { ADBField, Project } from "@/types/storage";
+import { eventBus, EVENTS } from '@/utils/eventBus';
+import { v4 as uuidv4 } from 'uuid';
+import { projectStore } from '@/stores/projectStore';
 
 const { Option } = Select;
 
@@ -97,6 +101,7 @@ interface FieldEditModalProps {
   handleEnumClear: () => void;
   onFinish: (values: FieldFormValues) => void;
   onCancel: () => void;
+  defaultActiveTab?: string; // 默认激活的Tab
 }
 
 const FieldEditModal: React.FC<FieldEditModalProps> = ({
@@ -116,7 +121,52 @@ const FieldEditModal: React.FC<FieldEditModalProps> = ({
   handleEnumClear,
   onFinish,
   onCancel,
+  defaultActiveTab = 'ai',
 }) => {
+  const [activeTab, setActiveTab] = useState<string>(defaultActiveTab);
+  const [aiForm] = Form.useForm();
+  
+  // 处理AI创建字段
+  const handleAICreateField = async (values: { prompt: string }) => {
+    try {
+      // 先添加实体到AI Chat上下文
+      const entityId = editingField?.entityId || Object.keys(project.schema.entities)[0];
+      const entity = project.schema.entities[entityId];
+      if (entity) {
+        const entityContext = {
+          id: uuidv4(),
+          type: 'entity' as const,
+          entityCode: entity.entityInfo.code,
+          entityName: entity.entityInfo.label || entity.entityInfo.code,
+          description: `${entity.entityInfo.label || entity.entityInfo.code}(${entity.entityInfo.code})`
+        };
+        projectStore.addAIChatContext(entityContext);
+      }
+
+      // 构建完整的AI提示词
+      const fullPrompt = `请帮我为实体"${entity?.entityInfo.label || '当前实体'}"创建一个或多个新的字段。以下是需求描述：
+
+${values.prompt}
+
+注意：
+1. 在本体系中 表 和 实体 是同一个概念
+2. 在本体系中 字段 和 列 是同一个概念
+3. 请基于需求描述展开设计，不要遗漏任何需求，并确保设计结果符合本体系的设计规范
+4. 请考虑字段的数据类型、长度、是否可空、默认值等属性
+`.replace(/\n/g, '\n\n');
+
+      // 通过事件总线发送消息到AI Chat
+      console.log('🚀 通过事件总线发送字段创建消息到AI Chat:', fullPrompt);
+      eventBus.emit(EVENTS.SEND_MESSAGE_TO_AI_CHAT, fullPrompt);
+      
+      // 关闭模态框
+      onCancel();
+      
+    } catch (error) {
+      console.error('AI创建字段失败:', error);
+    }
+  };
+  
   // 获取所有支持的类型
   const typeormNativeTypes = getTypeORMNativeTypes();
   const adbExtendTypes = getADBExtendTypes();
@@ -202,32 +252,69 @@ const FieldEditModal: React.FC<FieldEditModalProps> = ({
       title={editingField ? "编辑字段" : "新建字段"}
       open={visible}
       onCancel={onCancel}
-      onOk={() => form.submit()}
+      onOk={() => {
+        if (activeTab === 'ai') {
+          aiForm.submit();
+        } else {
+          form.submit();
+        }
+      }}
       width={600}
       forceRender // 强制渲染Modal内容，确保Form初始化
       maskClosable={false}
       destroyOnHidden={false} // 保持Modal内容，确保Form实例连接
     >
-      <Form
-        form={form}
-        onFinish={onFinish}
-        onValuesChange={(_, allValues) => {
-          // 更新表单值，但保护 type 字段不被意外清空
-          setFormValues((prev) => {
-            const newValues = { ...prev, ...allValues };
-            // 如果 type 字段在表单中存在且不为空，保持它
-            if (allValues.type && allValues.type !== "") {
-              newValues.type = allValues.type;
-            } else if (prev.type && prev.type !== "") {
-              // 如果表单中的 type 为空但之前有值，保持之前的值
-              newValues.type = prev.type;
-            }
-            return newValues;
-          });
-        }}
-        labelCol={{ span: 7 }}
-        wrapperCol={{ span: 15 }}
-        // labelWrap
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'ai',
+            label: 'AI',
+            children: (
+              <Form
+                form={aiForm}
+                onFinish={handleAICreateField}
+                layout="vertical"
+                preserve={true}
+              >
+                <Form.Item
+                  name="prompt"
+                  label="字段需求描述"
+                  rules={[{ required: true, message: '请输入字段创建的需求描述' }]}
+                >
+                  <Input.TextArea 
+                    rows={6} 
+                    placeholder="例如：为员工实体添加姓名、邮箱、手机号等基本信息字段"
+                  />
+                </Form.Item>
+              </Form>
+            )
+          },
+          {
+            key: 'manual',
+            label: '手工',
+            children: (
+              <Form
+                form={form}
+                onFinish={onFinish}
+                onValuesChange={(_, allValues) => {
+                  // 更新表单值，但保护 type 字段不被意外清空
+                  setFormValues((prev) => {
+                    const newValues = { ...prev, ...allValues };
+                    // 如果 type 字段在表单中存在且不为空，保持它
+                    if (allValues.type && allValues.type !== "") {
+                      newValues.type = allValues.type;
+                    } else if (prev.type && prev.type !== "") {
+                      // 如果表单中的 type 为空但之前有值，保持之前的值
+                      newValues.type = prev.type;
+                    }
+                    return newValues;
+                  });
+                }}
+                labelCol={{ span: 7 }}
+                wrapperCol={{ span: 15 }}
+                // labelWrap
         layout="horizontal"
         preserve={false}
         style={{ paddingTop: 30 }}
@@ -873,7 +960,11 @@ const FieldEditModal: React.FC<FieldEditModalProps> = ({
             </Form.Item>
           </div>
         )} */}
-      </Form>
+              </Form>
+            )
+          }
+        ]}
+      />
     </Modal>
   );
 };
