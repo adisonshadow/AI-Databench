@@ -301,3 +301,18 @@ body {
 .ant-tooltip .ant-tooltip-inner {
   background-color: rgb(89, 90, 93) !important;
 }
+
+
+.ant-bubble-content blockquote {
+  color: #a2a2a2;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.ant-bubble-content h2 {
+  font-size: 16px;
+  margin: 20px 0 6px 0;
+}
+.ant-bubble-content h3 {
+  font-size: 15px;
+  margin: 10px 0 4px 0;
+}

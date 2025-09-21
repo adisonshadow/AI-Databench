@@ -5,34 +5,34 @@ export interface TreeNode {
   id?: string;
   isActive: boolean;
   description?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export interface TreeBuilderConfig {
+export interface TreeBuilderConfig<T = unknown> {
   /** 用于获取节点标签的函数 */
-  getLabel: (item: any, part: string, isLeaf: boolean) => string;
+  getLabel: (item: T | undefined, part: string, isLeaf: boolean) => string;
   /** 用于构建节点额外属性的函数 */
-  buildExtraProps: (item: any, path: string, isLeaf: boolean) => Record<string, any>;
+  buildExtraProps: (item: T | undefined, path: string, isLeaf: boolean) => Record<string, unknown>;
   /** 用于判断节点是否激活的函数 */
-  getIsActive?: (item: any, isLeaf: boolean) => boolean;
+  getIsActive?: (item: T | undefined, isLeaf: boolean) => boolean;
 }
 
-export const buildTree = <T extends { code: string }>(
+export const buildTree = <T extends { code: string; id?: string; description?: string }>(
   items: T[],
-  config: TreeBuilderConfig
+  config: TreeBuilderConfig<T>
 ): TreeNode[] => {
   const treeMap = new Map<string, TreeNode>();
   const rootNodes: TreeNode[] = [];
 
   // 首先，将所有项转换为树节点
-  items.forEach((item:any) => {
+  items.forEach((item: T) => {
     if (!item.code) return; // 跳过无效数据
     
     const parts = item.code.split(':');
     let currentPath = '';
     
     // 为每一级创建节点
-    parts.forEach((part:any, index:any) => {
+    parts.forEach((part: string, index: number) => {
       const path = index === 0 ? part : `${currentPath}:${part}`;
       currentPath = path;
       
@@ -93,20 +93,20 @@ interface EntityForTree {
   status?: 'enabled' | 'disabled' | 'archived';
 }
 
-export const entityTreeConfig: TreeBuilderConfig = {
-  getLabel: (item: EntityForTree, part: string, isLeaf: boolean) => {
+export const entityTreeConfig: TreeBuilderConfig<EntityForTree> = {
+  getLabel: (item: EntityForTree | undefined, part: string, isLeaf: boolean) => {
     if (isLeaf && item) {
       return `${item.label || part}`;
     }
     return part;
   },
-  buildExtraProps: (item: EntityForTree, path: string, isLeaf: boolean) => ({
+  buildExtraProps: (item: EntityForTree | undefined, path: string, isLeaf: boolean) => ({
     entityId: isLeaf ? item?.id : undefined,
     type: isLeaf ? 'entity' : 'folder',
     status: isLeaf ? item?.status : undefined,
     rawEntity: isLeaf ? item : undefined
   }),
-  getIsActive: (item: EntityForTree, isLeaf: boolean) => {
+  getIsActive: (item: EntityForTree | undefined, isLeaf: boolean) => {
     if (isLeaf && item) {
       return item.status === 'enabled';
     }
@@ -128,15 +128,15 @@ interface Enum {
   }>;
 }
 
-export const enumTreeConfig: TreeBuilderConfig = {
-  getLabel: (item: Enum, part: string, isLeaf: boolean) => {
+export const enumTreeConfig: TreeBuilderConfig<Enum> = {
+  getLabel: (item: Enum | undefined, part: string, isLeaf: boolean) => {
     return isLeaf ? `${part}（${item?.description || ''}）` : part;
   },
-  buildExtraProps: (item: Enum, path: string, isLeaf: boolean) => ({
+  buildExtraProps: (item: Enum | undefined, path: string, isLeaf: boolean) => ({
     options: isLeaf ? item?.options : undefined,
     rawEnum: isLeaf ? item : undefined
   }),
-  getIsActive: (item: Enum, isLeaf: boolean) => isLeaf ? !!item?.isActive : true
+  getIsActive: (item: Enum | undefined, isLeaf: boolean) => isLeaf ? !!item?.isActive : true
 };
 
 // 表结构树构建配置
@@ -145,16 +145,16 @@ interface DataStructure {
   code: string;
   description?: string;
   isActive?: boolean;
-  fields?: any[];
+  fields?: unknown[];
 }
 
-export const schemaTreeConfig: TreeBuilderConfig = {
-  getLabel: (item: DataStructure, part: string, isLeaf: boolean) => {
+export const schemaTreeConfig: TreeBuilderConfig<DataStructure> = {
+  getLabel: (item: DataStructure | undefined, part: string, isLeaf: boolean) => {
     return isLeaf ? `${part}（${item?.description || ''}）` : part;
   },
-  buildExtraProps: (item: DataStructure, path: string, isLeaf: boolean) => ({
+  buildExtraProps: (item: DataStructure | undefined, path: string, isLeaf: boolean) => ({
     rawSchema: isLeaf ? item : undefined,
     fields: isLeaf ? item?.fields : undefined
   }),
-  getIsActive: (item: DataStructure, isLeaf: boolean) => isLeaf ? !!item?.isActive : true
+  getIsActive: (item: DataStructure | undefined, isLeaf: boolean) => isLeaf ? !!item?.isActive : true
 };

@@ -43,25 +43,25 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
   // 关系表格列定义
   const columns: ColumnsType<Relation> = [
     {
-      title: '源实体',
+      title: 'Source Entity',
       dataIndex: ['from', 'entityName'],
       key: 'from',
       width: 120,
     },
     {
-      title: '目标实体',
+      title: 'Target Entity',
       dataIndex: ['to', 'entityName'],
       key: 'to',
       width: 120,
     },
     {
-      title: '关系名称',
+      title: 'Relation Name',
       dataIndex: 'name',
       key: 'name',
       width: 120,
     },
     {
-      title: '关系类型',
+      title: 'Relation Type',
       dataIndex: 'type',
       key: 'type',
       width: 100,
@@ -79,29 +79,29 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
     //   render: (inverseName: string) => inverseName || '-',
     // },
     {
-      title: '级联操作',
+      title: 'Cascade Operation',
       dataIndex: ['config', 'cascade'],
       key: 'cascade',
       width: 80,
       render: (cascade: boolean) => (
         <Tag color={cascade ? 'green' : 'default'}>
-          {cascade ? '是' : '否'}
+          {cascade ? 'Yes' : 'No'}
         </Tag>
       ),
     },
-    // {
-    //   title: '删除策略',
-    //   dataIndex: ['config', 'onDelete'],
-    //   key: 'onDelete',
-    //   width: 100,
-    //   render: (onDelete: CascadeType) => (
-    //     <Tag color={getCascadeTypeColor(onDelete)}>
-    //       {RelationUtils.getCascadeTypeDisplayName(onDelete)}
-    //     </Tag>
-    //   ),
-    // },
     {
-      title: '操作',
+      title: 'Delete Strategy',
+      dataIndex: ['config', 'onDelete'],
+      key: 'onDelete',
+      width: 100,
+      render: (onDelete: CascadeType) => (
+        <Tag color={getCascadeTypeColor(onDelete)}>
+          {RelationUtils.getCascadeTypeDisplayName(onDelete)}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Actions',
       key: 'actions',
       width: 80,
       render: (_, record) => (
@@ -113,12 +113,12 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
             onClick={() => onEdit(record)}
           />
           <Popconfirm
-            title="确定删除此关系？"
-            description="删除关系可能会影响数据完整性，请谨慎操作。"
+            title="Are you sure you want to delete this relation?"
+            description="Deleting a relation may affect data integrity, please proceed with caution."
             icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
             onConfirm={() => onDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText="Delete"
+            cancelText="Cancel"
           >
             <Button
               type="link"
@@ -150,7 +150,15 @@ const RelationList: React.FC<RelationListProps> = ({ relations, onEdit, onDelete
         />
       ) : (
         <Empty 
-            description="暂无关系，点击上方按钮新建关系"
+            description={
+              <div>
+                <span>No relations, click </span> 
+                <span style={{ color: '#DDD',display: 'inline-block', margin: '0 4px' }}>
+                  + New
+                </span>
+                <span>(right-above) to add new relations</span>
+              </div>
+            }
             style={{ margin: '40px 0' }}
         />
       )}

@@ -4,7 +4,7 @@
 
 AIDatabench 是一个利用 AI 并 基于 ADB-TypeORM 的数据应用设计工具 ，为用户提供智能化的数据库实体设计、关系管理和服务生成功能。
 
-<img src="https://raw.githubusercontent.com/adisonshadow/AI-Databench/refs/heads/main/Screenshots/p1.png" alt="Main UI">
+<img src="https://raw.githubusercontent.com/adisonshadow/AI-Databench/refs/heads/main/Screenshots/g1.gif" alt="Main UI">
 
 ## 🚀 核心功能
 
@@ -84,6 +84,7 @@ Vite + React 18 + TypeScript
 - **关系映射**：复杂实体关系的类型安全映射
 
 ### 数据存储方案
+- localStorage
 ```typescript
 // localStorage 数据结构
 interface AIDatabenchStorage {
@@ -98,6 +99,9 @@ interface AIDatabenchStorage {
   settings: UserSettings;
 }
 ```
+
+- IndexedDB
+详见 [IndexedDB 存储系统](./frontend/src/utils/storage/IndexedDB%20存储系统.md)
 
 ## 📁 项目结构
 

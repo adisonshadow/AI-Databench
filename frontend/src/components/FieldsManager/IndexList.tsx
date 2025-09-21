@@ -15,33 +15,33 @@ interface IndexListProps {
 const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCreate, rowStatusMap = {} }) => {
   const columns: ColumnsType<Index> = [
     {
-      title: '索引名称',
+      title: 'Index Name',
       dataIndex: 'name',
       key: 'name',
       width: 200,
     },
     {
-      title: '字段',
+      title: 'Fields',
       dataIndex: 'fields',
       key: 'fields',
       render: (fields: string[]) => (fields || []).filter((field): field is string => Boolean(field)).join(', '),
     },
     {
-      title: '唯一性',
+      title: 'Uniqueness',
       dataIndex: 'unique',
       key: 'unique',
       width: 100,
       render: (unique: boolean) => (unique ? '唯一' : '非唯一'),
     },
     {
-      title: '类型',
+      title: 'Type',
       dataIndex: 'type',
       key: 'type',
       width: 100,
       render: (type: string) => type || '默认',
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'actions',
       width: 120,
       render: (_, record) => (
@@ -90,7 +90,15 @@ const IndexList: React.FC<IndexListProps> = ({ indexes, onEdit, onDelete, onCrea
         />
       ) : (
         <Empty 
-            description="暂无索引，点击上方按钮新建索引"
+            description={
+              <div>
+                <span>No indexes, click </span> 
+                <span style={{ color: '#DDD',display: 'inline-block', margin: '0 4px' }}>
+                  + New
+                </span>
+                <span>(right-above) to add new indexes</span>
+              </div>
+            }
             style={{ margin: '40px 0' }}
         />
       )}

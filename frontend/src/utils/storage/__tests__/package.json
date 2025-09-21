@@ -1,0 +1,46 @@
+{
+  "name": "aidatabench-storage-tests",
+  "version": "1.0.0",
+  "description": "IndexedDB 存储系统测试",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:db": "jest db.test.ts",
+    "test:storage": "jest storage.test.ts",
+    "test:events": "jest events.test.ts",
+    "test:hooks": "jest hooks.test.tsx",
+    "test:integration": "jest integration.test.ts"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/react-hooks": "^8.0.1",
+    "@types/jest": "^29.5.0",
+    "fake-indexeddb": "^5.0.2",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/src/utils/storage/__tests__/setup.ts"],
+    "testMatch": [
+      "<rootDir>/src/utils/storage/__tests__/**/*.test.{ts,tsx}"
+    ],
+    "collectCoverageFrom": [
+      "src/utils/storage/**/*.{ts,tsx}",
+      "!src/utils/storage/**/*.d.ts",
+      "!src/utils/storage/__tests__/**/*"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "moduleNameMapping": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "testTimeout": 10000
+  }
+}

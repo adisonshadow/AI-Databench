@@ -80,7 +80,7 @@ export class RelationUtils {
     if (!fromEntity) {
       errors.push({
         code: 'ENTITY_NOT_FOUND',
-        message: `源实体 ${relation.from.entityName} 不存在`,
+        message: `Source entity ${relation.from.entityName} not found`,
         field: 'from.entityId',
         severity: 'error',
       });
@@ -89,7 +89,7 @@ export class RelationUtils {
     if (!toEntity) {
       errors.push({
         code: 'ENTITY_NOT_FOUND',
-        message: `目标实体 ${relation.to.entityName} 不存在`,
+        message: `Target entity ${relation.to.entityName} not found`,
         field: 'to.entityId',
         severity: 'error',
       });
@@ -99,7 +99,7 @@ export class RelationUtils {
     if (!relation.name || relation.name.trim() === '') {
       errors.push({
         code: 'INVALID_NAME',
-        message: '关系名称不能为空',
+        message: 'Relation name cannot be empty',
         field: 'name',
         severity: 'error',
       });
@@ -135,7 +135,7 @@ export class RelationUtils {
     if (!fromEntity || !toEntity) return;
 
     switch (relation.type) {
-      case RelationType.ONE_TO_ONE:
+      case RelationType.ONE_TO_ONE: {
         // 一对一关系：检查是否已有其他一对一关系
         const existingOneToOne = project.schema.relations.filter(r => 
           r.type === RelationType.ONE_TO_ONE && 
@@ -144,11 +144,12 @@ export class RelationUtils {
         if (existingOneToOne.length > 0) {
           warnings.push({
             code: 'MULTIPLE_ONE_TO_ONE',
-            message: '该实体已存在一对一关系，建议检查设计',
-            suggestion: '考虑使用一对多关系或重新设计实体结构',
+            message: 'This entity already has a one-to-one relation, please check the design',
+            suggestion: 'Consider using one-to-many relation or redesign the entity structure',
           });
         }
         break;
+      }
 
       case RelationType.ONE_TO_MANY:
       case RelationType.MANY_TO_ONE:
@@ -173,7 +174,7 @@ export class RelationUtils {
   private static validateForeignKeyTypes(
     relation: Relation,
     project: Project,
-    errors: RelationValidationError[]
+    _errors: RelationValidationError[]
   ): void {
     const fromEntity = project.schema.entities[relation.from.entityId];
     const toEntity = project.schema.entities[relation.to.entityId];
@@ -196,7 +197,7 @@ export class RelationUtils {
     if (!relation.joinTable) {
       errors.push({
         code: 'MISSING_JOIN_TABLE',
-        message: '多对多关系必须配置中间表',
+        message: 'Many-to-many relation must configure join table',
         field: 'joinTable',
         severity: 'error',
       });
@@ -207,7 +208,7 @@ export class RelationUtils {
     if (!relation.joinTable.name || relation.joinTable.name.trim() === '') {
       errors.push({
         code: 'INVALID_JOIN_TABLE_NAME',
-        message: '中间表名称不能为空',
+        message: 'Join table name cannot be empty',
         field: 'joinTable.name',
         severity: 'error',
       });
@@ -217,7 +218,7 @@ export class RelationUtils {
     if (!relation.joinTable.joinColumn || relation.joinTable.joinColumn.trim() === '') {
       errors.push({
         code: 'INVALID_JOIN_COLUMN',
-        message: '连接列名称不能为空',
+        message: 'Join column name cannot be empty',
         field: 'joinTable.joinColumn',
         severity: 'error',
       });
@@ -226,7 +227,7 @@ export class RelationUtils {
     if (!relation.joinTable.inverseJoinColumn || relation.joinTable.inverseJoinColumn.trim() === '') {
       errors.push({
         code: 'INVALID_INVERSE_JOIN_COLUMN',
-        message: '反向连接列名称不能为空',
+        message: 'Inverse join column name cannot be empty',
         field: 'joinTable.inverseJoinColumn',
         severity: 'error',
       });
@@ -248,7 +249,7 @@ export class RelationUtils {
     if (existingTables.includes(relation.joinTable.name)) {
       errors.push({
         code: 'JOIN_TABLE_NAME_CONFLICT',
-        message: `中间表名称 "${relation.joinTable.name}" 与现有表名冲突`,
+        message: `Join table name "${relation.joinTable.name}" conflicts with existing table name`,
         field: 'joinTable.name',
         severity: 'error',
       });
@@ -262,7 +263,7 @@ export class RelationUtils {
     if (existingJoinTables.includes(relation.joinTable.name)) {
       errors.push({
         code: 'JOIN_TABLE_NAME_CONFLICT',
-        message: `中间表名称 "${relation.joinTable.name}" 已被其他关系使用`,
+        message: `Join table name "${relation.joinTable.name}" is used by other relations`,
         field: 'joinTable.name',
         severity: 'error',
       });
@@ -286,9 +287,9 @@ export class RelationUtils {
     if (duplicateRelation) {
       conflicts.push({
         type: 'duplicate',
-        message: `已存在相同的关系：${relation.from.entityName} → ${relation.to.entityName}`,
+        message: `Same relation already exists: ${relation.from.entityName} → ${relation.to.entityName}`,
         conflictingRelation: duplicateRelation,
-        suggestion: '请使用不同的关系名称或检查是否重复创建',
+        suggestion: 'Please use different relation name or check if it is duplicated',
       });
     }
 
@@ -296,8 +297,8 @@ export class RelationUtils {
     if (this.hasCircularDependency(relation, existingRelations)) {
       conflicts.push({
         type: 'circular',
-        message: '检测到循环依赖关系',
-        suggestion: '请重新设计关系结构，避免循环依赖',
+        message: 'Circular dependency detected',
+        suggestion: 'Please redesign the relation structure, avoid circular dependency',
       });
     }
 
@@ -309,9 +310,9 @@ export class RelationUtils {
     if (namingConflict) {
       conflicts.push({
         type: 'naming',
-        message: `关系名称 "${relation.name}" 已被使用`,
+        message: `Relation name "${relation.name}" is used`,
         conflictingRelation: namingConflict,
-        suggestion: '请使用不同的关系名称',
+        suggestion: 'Please use different relation name',
       });
     }
 
@@ -419,7 +420,7 @@ ${name}: ${to.entityName}[];`;
             fromEntityId: entity1.entityInfo.id,
             toEntityId: entity2.entityInfo.id,
             confidence: 0.8,
-            reason: `实体名称 "${name1}" 和 "${name2}" 存在关联性`,
+            reason: `Entity name "${name1}" and "${name2}" have relatedness`,
             suggestedName: this.generateRelationName(name1, name2),
             suggestedInverseName: this.generateInverseRelationName(name1, name2),
           });
@@ -510,10 +511,10 @@ ${name}: ${to.entityName}[];`;
    */
   static getRelationTypeDisplayName(type: RelationType): string {
     const displayNames = {
-      [RelationType.ONE_TO_ONE]: '一对一',
-      [RelationType.ONE_TO_MANY]: '一对多',
-      [RelationType.MANY_TO_ONE]: '多对一',
-      [RelationType.MANY_TO_MANY]: '多对多',
+      [RelationType.ONE_TO_ONE]: 'One-to-one',
+      [RelationType.ONE_TO_MANY]: 'One-to-many',
+      [RelationType.MANY_TO_ONE]: 'Many-to-one',
+      [RelationType.MANY_TO_MANY]: 'Many-to-many',
     };
     return displayNames[type];
   }
@@ -523,10 +524,10 @@ ${name}: ${to.entityName}[];`;
    */
   static getCascadeTypeDisplayName(type: CascadeType): string {
     const displayNames = {
-      [CascadeType.CASCADE]: '级联',
-      [CascadeType.SET_NULL]: '设为空',
-      [CascadeType.RESTRICT]: '限制',
-      [CascadeType.NO_ACTION]: '无操作',
+      [CascadeType.CASCADE]: 'Cascade',
+      [CascadeType.SET_NULL]: 'Set null',
+      [CascadeType.RESTRICT]: 'Restrict',
+      [CascadeType.NO_ACTION]: 'No action',
     };
     return displayNames[type];
   }

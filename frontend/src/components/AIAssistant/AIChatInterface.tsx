@@ -127,7 +127,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
   
   // 聊天相关状态
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'system', content: '你好！我是AI ORM设计专家，可以帮助你设计和创建数据库实体。请告诉我你的业务需求，我会为你设计合适的实体结构。' }
+    { role: 'system', content: 'Hello! I am AI ORM design expert, can help you design and create database entities. Please tell me your business needs, I will design the appropriate entity structure for you.' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -457,10 +457,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       // 显示成功消息
       const successMessage: ChatMessage = {
         role: 'assistant',
-        content: `✅ 已成功创建实体 "${newEntity.entityInfo.label}" (${newEntity.entityInfo.code})`,
+        content: `✅ Successfully created entity "${newEntity.entityInfo.label}" (${newEntity.entityInfo.code})`,
         badges: [{
           type: 'success',
-          text: '实体已创建',
+          text: 'Entity Created',
           color: '#52c41a',
           icon: 'plus-circle'
         }]
@@ -473,10 +473,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: `❌ 创建实体失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `❌ Create entity failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         badges: [{
           type: 'error',
-          text: '创建失败',
+          text: 'Create Failed',
           color: '#ff4d4f',
           icon: 'exclamation-circle'
         }]
@@ -634,10 +634,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         // 显示成功消息
         const successMessage: ChatMessage = {
           role: 'assistant',
-          content: `✅ 已成功在实体 "${targetEntity.entityInfo.label}" 中添加字段`,
+          content: `✅ Successfully added fields to entity "${targetEntity.entityInfo.label}"`,
           badges: [{
             type: 'success',
-            text: '字段已添加',
+            text: 'Fields Added',
             color: '#52c41a',
             icon: 'plus-circle'
           }]
@@ -651,10 +651,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: `❌ 创建字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `❌ Create field failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         badges: [{
           type: 'error',
-          text: '创建失败',
+          text: 'Create Failed',
           color: '#ff4d4f',
           icon: 'exclamation-circle'
         }]
@@ -772,7 +772,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         
         const successMessage: ChatMessage = {
           role: 'assistant',
-          content: `✅ 已成功更新实体 "${targetEntity.entityInfo.label}" 中的字段`,
+          content: `✅ Successfully updated fields in entity "${targetEntity.entityInfo.label}"`,
           badges: [{
             type: 'success',
             text: '字段已更新',
@@ -789,10 +789,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: `❌ 更新字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `❌ Update field failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         badges: [{
           type: 'error',
-          text: '更新失败',
+          text: 'Update Failed',
           color: '#ff4d4f',
           icon: 'exclamation-circle'
         }]
@@ -892,10 +892,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
           
           const successMessage: ChatMessage = {
             role: 'assistant',
-            content: `✅ 已成功从实体 "${targetEntity.entityInfo.label}" 中删除 ${deletedCount} 个字段`,
+            content: `✅ Successfully deleted ${deletedCount} fields from entity "${targetEntity.entityInfo.label}"`,
             badges: [{
               type: 'success',
-              text: '字段已删除',
+              text: 'Fields Deleted',
               color: '#52c41a',
               icon: 'delete'
             }]
@@ -912,10 +912,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: `❌ 删除字段失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `❌ Delete field failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         badges: [{
           type: 'error',
-          text: '删除失败',
+          text: 'Delete Failed',
           color: '#ff4d4f',
           icon: 'exclamation-circle'
         }]
@@ -1467,7 +1467,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
     
     // 生成包含上下文的 AI 提示词
     const contextPrompt = aiIntegration.generateAIPrompt(inputMessage);
-    console.log('🔍 AI提示词长度:', contextPrompt.length);
+    // console.log('🔍 AI提示词长度:', contextPrompt.length);
     console.log('🔍 AI提示词包含实体信息:', contextPrompt.includes('现有实体'));
     
     // 添加上下文信息到提示词中
@@ -1476,19 +1476,19 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       const contextInfo = aiChatContexts.map(context => {
         switch (context.type) {
           case 'entity':
-            return `实体: ${context.entityName} (code: ${context.entityCode})`;
+            return `Entity: ${context.entityName} (code: ${context.entityCode})`;
           case 'field':
-            return `实体 ${context.entityName} (code: ${context.entityCode}) 的字段: ${context.fieldCode}`;
+            return `Entity ${context.entityName} (code: ${context.entityCode}) Fields: ${context.fieldCode}`;
           case 'index':
-            return `实体 ${context.entityName} (code: ${context.entityCode}) 的索引`;
+            return `Entity ${context.entityName} (code: ${context.entityCode}) Indexes`;
           case 'relation':
-            return `实体 ${context.entityName} (code: ${context.entityCode}) 的关系`;
+            return `Entity ${context.entityName} (code: ${context.entityCode}) Relations`;
           default:
             return context.description;
         }
       }).join('\n');
       
-      enhancedPrompt = `${contextPrompt}\n\n当前上下文信息:\n${contextInfo}`;
+      enhancedPrompt = `${contextPrompt}\n\nCurrent context information:\n${contextInfo}`;
     }
     
     // 构建发送给AI的消息列表（包含系统提示词和上下文）
@@ -1652,7 +1652,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage && lastMessage.role === 'assistant') {
-              lastMessage.content = `❌ 流式响应失败: ${streamError instanceof Error ? streamError.message : '未知错误'}`;
+              lastMessage.content = `❌ Stream response failed: ${streamError instanceof Error ? streamError.message : 'Unknown error'}`;
             }
             return newMessages;
           });
@@ -1673,7 +1673,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
         
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: response.choices[0]?.message?.content || '抱歉，没有收到有效回复'
+          content: response.choices[0]?.message?.content || 'Sorry, no valid response received'
         };
         setMessages(prev => [...prev, assistantMessage]);
         
@@ -1794,10 +1794,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
       }}>
         <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
           <Space align="center">
-            <Text style={{ color: '#fff' }}>AI助手</Text>
+            <Text style={{ color: '#fff' }}>AI Assistant</Text>
           </Space>
           <Space>
-            <Tooltip title="对话历史">
+            <Tooltip title="Conversation History">
               <Button 
                 type="text" 
                 icon={<HistoryOutlined />} 
@@ -1805,7 +1805,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
                 style={{ color: '#fff' }}
               />
             </Tooltip>
-            <Tooltip title="清空对话">
+            <Tooltip title="Clear Conversation">
               <Button 
                 type="text" 
                 icon={<ClearOutlined />} 
@@ -1835,8 +1835,8 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
                     key: index.toString(),
                     role: message.role === 'user' ? 'user' : 'assistant',
                     content: displayContent,
-                    header: message.role === 'user' ? '我' : 
-                           message.role === 'assistant' ? 'AI助手' : '系统',
+                    header: message.role === 'user' ? 'You' : 
+                           message.role === 'assistant' ? 'AI Assistant' : 'System',
                     placement: message.role === 'user' ? 'end' : 'start',
                     variant: message.role === 'user' ? 'filled' : 'outlined',
                     classNames: {
@@ -1850,18 +1850,18 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
                   user: {
                     placement: 'end',
                     variant: 'filled',
-                    header: '用户'
+                    header: 'User'
                   },
                   assistant: {
                     placement: 'start',
                     variant: 'outlined',
-                    header: 'AI助手',
+                    header: 'AI Assistant',
                     messageRender: SmartRenderer
                   },
                   system: {
                     placement: 'start',
                     variant: 'outlined',
-                    header: '系统'
+                    header: 'System'
                   }
                 }}
                 autoScroll={true}

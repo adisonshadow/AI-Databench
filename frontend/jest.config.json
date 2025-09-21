@@ -1,0 +1,26 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "jsdom",
+  "setupFilesAfterEnv": ["<rootDir>/src/utils/storage/__tests__/setup.ts"],
+  "testMatch": [
+    "<rootDir>/src/utils/storage/__tests__/**/*.test.{ts,tsx}"
+  ],
+  "collectCoverageFrom": [
+    "src/utils/storage/**/*.{ts,tsx}",
+    "!src/utils/storage/**/*.d.ts",
+    "!src/utils/storage/__tests__/**/*"
+  ],
+  "coverageDirectory": "coverage",
+  "coverageReporters": ["text", "lcov", "html"],
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "transform": {
+    "^.+\\.(ts|tsx)$": ["ts-jest", {
+      "tsconfig": {
+        "jsx": "react-jsx"
+      }
+    }]
+  },
+  "testTimeout": 10000
+}
